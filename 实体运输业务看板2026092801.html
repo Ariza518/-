@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>一机集团 · 智慧物流管理平台</title>
+<style>
+  /* ============ 设计令牌(全局唯一取色处,沿用原配色体系) ============
+     语义约定:primary=操作/强调  green=成功/发货  yellow=待办/预警
+               red=失败/删除     涨跌 = green/red                     */
+  :root{
+    --primary:#409eff; --primary-hover:#66b1ff; --primary-active:#3a8ee6; --primary-rgb:64,158,255;
+    --primary-bg:#ecf5ff; --primary-bg-deep:#d9ecff; --primary-line:#b3d8ff;
+    --success:#67c23a; --success-bg:#f0f9eb; --success-line:#b3e19d;
+    --warning:#e6a23c; --warning-bg:#fdf6ec;
+    --danger:#f56c6c;  --danger-bg:#fef0f0;  --danger-line:#fbc4c4;
+    --up:#2f9e52; --down:#f56c6c;
+    --t1:#1f2d3d; --t2:#303133; --t3:#606266; --t4:#909399; --t5:#a8abb2;
+    --line:#dcdfe6; --line-light:#ebeef5; --line-lighter:#f2f5f9;
+    --bg-page:#f0f2f5; --bg-hover:#f5f7fa; --surface:#fff;
+    --th-bg:#e8f1fd; --th-bd:#dde8f8; --th-sub:#f2f7ff;
+    --side-bg:#263445; --side-deep:#1c2a3b; --side-text:#a3b1c2;
+    --shadow-1:0 1px 2px rgba(31,45,61,.03), 0 2px 8px rgba(31,45,61,.05);
+    --shadow-2:0 4px 16px rgba(31,45,61,.10);
+    --radius-sm:4px; --radius:6px; --radius-lg:8px;
+    --font-num:"Bahnschrift","DIN Alternate","Segoe UI",system-ui,sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; }
+  body {
+    font-family:"Segoe UI","Helvetica Neue",Helvetica,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","微软雅黑",Arial,sans-serif;
+    font-size:14px; color:var(--t2); background:var(--bg-page); display:flex; min-width:1360px;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  }
+  a { text-decoration:none; color:inherit; }
+  ul { list-style:none; }
+  button { font-family:inherit; }
+  .ic { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  :is(a,button,input,select,[tabindex]):focus-visible { outline:2px solid rgba(var(--primary-rgb),.55); outline-offset:1px; }
+  ::selection { background:rgba(var(--primary-rgb),.18); }
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb { background:#c9d0da; border-radius:4px; }
+  ::-webkit-scrollbar-thumb:hover { background:#aeb7c4; }
+  ::-webkit-scrollbar-track { background:transparent; }
+
+  /* ============ 侧边栏 ============ */
+  .sidebar { width:178px; flex:none; height:100vh; background:var(--side-bg); overflow-y:auto; overflow-x:hidden; position:relative; z-index:10; }
+  .sidebar::-webkit-scrollbar { width:4px; }
+  .logo { display:flex; align-items:center; gap:8px; height:54px; padding:0 14px; background:linear-gradient(135deg,var(--side-deep),var(--side-bg)); border-bottom:1px solid rgba(255,255,255,.07); }
+  .logo-ic { width:30px; height:30px; flex:none; }
+  .logo-txt { line-height:1.15; white-space:nowrap; }
+  .logo-txt b { display:block; color:#fff; font-size:15px; font-weight:600; letter-spacing:1px; }
+  .logo-txt span { display:block; color:#7f8fa0; font-size:10px; letter-spacing:.5px; transform-origin:left; transform:scale(.92); }
+
+  .menu-link { position:relative; display:flex; align-items:center; gap:8px; height:40px; padding:0 14px; margin:2px 8px; border-radius:var(--radius); color:var(--side-text); font-size:14px; cursor:pointer; white-space:nowrap; user-select:none; transition:background .18s,color .18s; }
+  .menu-link:hover { color:#fff; background:rgba(255,255,255,.07); }
+  .menu-link.active { color:#fff; font-weight:600; background:rgba(64,158,255,.22); }
+  .menu-link.active::before { content:''; position:absolute; left:-8px; top:8px; bottom:8px; width:3px; border-radius:0 3px 3px 0; background:var(--primary); }
+  .menu-link.lit { color:#dbe4ee; }
+  .menu-link .chev { margin-left:auto; width:12px; height:12px; transition:transform .2s; }
+  .menu-link .chev.down { transform:rotate(-90deg); }
+  li.open > .menu-link .chev.down { transform:rotate(0deg); }
+  .lv2 { padding-left:26px; height:38px; font-size:13.5px; }
+  .lv3 { padding-left:42px; height:36px; font-size:12px; gap:6px; }
+  .sub { display:none; }
+  li.open > .sub { display:block; }
+
+  /* ============ 右侧整体 ============ */
+  .layout { flex:1; min-width:0; display:flex; flex-direction:column; height:100vh; }
+
+  /* 头部 */
+  .header { height:50px; background:var(--surface); display:flex; align-items:center; padding:0 16px; border-bottom:1px solid #e8ebf1; box-shadow:0 1px 4px rgba(0,21,41,.05); position:relative; z-index:5; flex:none; }
+  .hamb { width:32px; height:32px; margin-left:-6px; color:#5a5e66; cursor:pointer; display:flex; align-items:center; justify-content:center; border-radius:var(--radius-sm); transition:background .15s,color .15s; }
+  .hamb:hover { color:var(--primary); background:var(--bg-hover); }
+  .crumb { margin-left:10px; font-size:13.5px; color:#97a8be; display:flex; align-items:center; white-space:nowrap; }
+  .crumb .sep { margin:0 8px; color:#c0c4cc; }
+  .crumb .cur { color:#2b3b4e; font-weight:600; }
+  .header-right { margin-left:auto; display:flex; align-items:center; gap:6px; }
+  .bell { position:relative; width:32px; height:32px; color:#5a6a7a; cursor:pointer; display:flex; align-items:center; justify-content:center; border-radius:var(--radius-sm); transition:background .15s,color .15s; }
+  .bell:hover { color:var(--primary); background:var(--bg-hover); }
+  .bell .dot { position:absolute; top:3px; right:3px; width:7px; height:7px; background:var(--danger); border-radius:50%; border:1.5px solid var(--surface); }
+  .user-info { display:flex; align-items:center; gap:8px; margin-left:8px; padding:4px 8px 4px 12px; font-size:13.5px; color:var(--t2); cursor:pointer; border-radius:16px; transition:background .15s; }
+  .user-info:hover { background:var(--bg-hover); }
+  .avatar { width:28px; height:28px; border-radius:50%; background:linear-gradient(145deg,#9dbbe8,#5c7fd6); display:flex; align-items:center; justify-content:center; color:#fff; border:2px solid #e8ecf2; }
+  .avatar .ic { width:15px; height:15px; }
+  .caret { width:11px; height:11px; color:var(--t4); }
+
+  /* 页签栏 */
+  .tabsbar { height:40px; background:var(--surface); display:flex; align-items:center; padding:0 12px; overflow-x:auto; white-space:nowrap; flex:none; border-bottom:1px solid #eef0f4; }
+  .tabsbar::-webkit-scrollbar { height:4px; }
+  .tag { height:28px; display:inline-flex; align-items:center; gap:6px; padding:0 11px; margin-right:8px; background:#f4f6f9; border:1px solid var(--line); color:#5a6474; font-size:12px; border-radius:var(--radius-sm); cursor:pointer; flex:none; transition:all .15s; }
+  .tag:hover { color:var(--primary); border-color:var(--primary-line); background:var(--primary-bg); }
+  .tag .x { font-style:normal; font-size:13px; opacity:.65; line-height:1; }
+  .tag .x:hover { opacity:1; color:var(--danger); }
+  .tag.on { background:var(--primary); color:#fff; border-color:var(--primary); font-weight:500; }
+  .tag.on:hover { background:var(--primary-hover); border-color:var(--primary-hover); }
+  .tag.on::before { content:''; width:6px; height:6px; border-radius:50%; background:#fff; }
+
+  /* 内容区 */
+  .content { flex:1; padding:16px; overflow:auto; }
+  .card { background:var(--surface); border-radius:var(--radius-lg); border:1px solid var(--line-light); box-shadow:var(--shadow-1); }
+
+  /* ============ 筛选区 ============ */
+  .filter-card { padding:18px 20px 4px; margin-bottom:12px; }
+  .f-row { display:flex; align-items:center; margin-bottom:14px; }
+  .f-item { display:flex; align-items:center; margin-right:36px; }
+  .f-label { font-size:13.5px; font-weight:500; color:var(--t2); margin-right:10px; white-space:nowrap; }
+  .ipt { height:32px; border:1px solid var(--line); border-radius:var(--radius-sm); padding:0 10px; font-size:13px; color:var(--t3); width:220px; outline:none; background:var(--surface); font-family:inherit; transition:border-color .2s, box-shadow .2s; }
+  .ipt::placeholder { color:var(--t5); }
+  .ipt:hover { border-color:#c0c4cc; }
+  .ipt:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(var(--primary-rgb),.12); }
+  .ipt.w-lg { width:340px; }
+  .ipt.w-md { width:250px; }
+  select.ipt { appearance:none; -webkit-appearance:none; padding-right:26px; cursor:pointer;
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a8abb2' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 9px center; }
+  select.ipt.invalid { color:var(--t5); }
+  .daterange { display:flex; align-items:center; gap:10px; border:1px solid var(--line); border-radius:var(--radius-sm); height:32px; padding:0 10px; width:470px; color:var(--t3); font-size:13px; background:var(--surface); transition:border-color .2s, box-shadow .2s; }
+  .daterange:hover { border-color:#c0c4cc; }
+  .daterange:focus-within { border-color:var(--primary); box-shadow:0 0 0 3px rgba(var(--primary-rgb),.12); }
+  .daterange .ic { width:14px; height:14px; color:var(--t4); }
+  .daterange span { flex:1; }
+  .daterange .dash { flex:none; color:var(--t4); }
+
+  .btn { height:32px; padding:0 15px; border-radius:var(--radius-sm); font-size:13px; font-weight:500; display:inline-flex; align-items:center; gap:5px; cursor:pointer; border:1px solid var(--line); background:var(--surface); color:var(--t3); white-space:nowrap; transition:all .15s; }
+  .btn .ic { width:13px; height:13px; stroke-width:2; }
+  .btn:hover { color:var(--primary); border-color:var(--primary-line); background:var(--primary-bg); }
+  .btn:active { transform:translateY(1px); }
+  .btn-primary { background:var(--primary); border-color:var(--primary); color:#fff; }
+  .btn-primary:hover { background:var(--primary-hover); border-color:var(--primary-hover); color:#fff; box-shadow:0 2px 8px rgba(var(--primary-rgb),.35); }
+
+  /* ============ 表格卡片 ============ */
+  .tbl-toolbar { display:flex; align-items:center; padding:14px 20px; }
+  .tt-title { position:relative; font-size:15px; font-weight:600; color:var(--t1); padding-left:10px; }
+  .tt-title::before { content:''; position:absolute; left:0; top:50%; transform:translateY(-50%); height:14px; width:4px; border-radius:2px; background:var(--primary); }
+  .tt-count { font-size:12px; color:var(--t4); margin-left:12px; }
+  .tt-btns { margin-left:auto; display:flex; gap:10px; }
+  .btn-blue-light { background:var(--primary-bg); border-color:var(--primary-line); color:var(--primary-active); }
+  .btn-blue-light:hover { background:var(--primary); border-color:var(--primary); color:#fff; }
+
+  .tbl-wrap { overflow-x:auto; }
+  table.data { border-collapse:separate; border-spacing:0; table-layout:fixed; }
+  table.data th { background:var(--th-bg); color:#3d4d63; font-weight:600; font-size:12.5px; height:40px; padding:0 12px; text-align:center; white-space:nowrap; overflow:hidden; border-bottom:1px solid var(--th-bd); }
+  table.data td { height:42px; padding:0 12px; font-size:13px; color:var(--t3); border-bottom:1px solid var(--line-light); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums; }
+  table.data tbody tr:hover td { background:var(--bg-hover); }
+  table.data td.center, table.data th.center { text-align:center; }
+  td.order-no { color:var(--primary); font-weight:500; cursor:pointer; font-variant-numeric:tabular-nums; font-family:var(--font-num); }
+  td.order-no:hover { text-decoration:underline; text-underline-offset:3px; }
+  /* 数字列统一 DIN 风格字体(与 KPI 数字同族) */
+  td.num, table.report td.right { font-family:var(--font-num); }
+  .chk { width:14px; height:14px; accent-color:var(--primary); cursor:pointer; display:block; margin:0 auto; }
+
+  .badge { display:inline-flex; align-items:center; height:22px; padding:0 9px 0 7px; border-radius:11px; font-size:12px; line-height:1; white-space:nowrap; }
+  .badge::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; margin-right:5px; }
+  .b-warning { background:var(--warning-bg); color:var(--warning); }
+  .b-success { background:var(--success-bg); color:var(--success); }
+
+  .op-btn { height:26px; padding:0 9px; font-size:12px; border-radius:var(--radius-sm); display:inline-flex; align-items:center; gap:4px; border:1px solid; cursor:pointer; background:var(--surface); margin-right:6px; transition:all .15s; }
+  .op-btn .ic { width:12px; height:12px; }
+  .op-edit { color:var(--success); border-color:var(--success-line); background:var(--success-bg); }
+  .op-edit:hover { background:var(--success); color:#fff; border-color:var(--success); }
+  .op-del { color:var(--danger); border-color:var(--danger-line); background:var(--danger-bg); }
+  .op-del:hover { background:var(--danger); color:#fff; border-color:var(--danger); }
+  .op-view { color:var(--primary); border-color:var(--primary-line); background:var(--primary-bg); }
+  .op-view:hover { background:var(--primary); color:#fff; border-color:var(--primary); }
+
+  th.ops, td.ops { position:sticky; right:0; background:var(--surface); box-shadow:-8px 0 8px -8px rgba(0,0,0,.12); }
+  th.ops { background:var(--th-bg); z-index:2; }
+  td.ops { text-overflow:clip; }
+
+  /* 空状态 */
+  .empty { text-align:center; padding:44px 0 48px; color:var(--t4); }
+  .empty-fig { width:54px; height:54px; margin:0 auto 12px; border-radius:50%; background:var(--bg-hover); display:flex; align-items:center; justify-content:center; color:#b7c0cd; }
+  .empty-fig .ic { width:26px; height:26px; stroke-width:1.5; }
+  .empty p { font-size:13px; }
+
+  .pgbar { display:flex; align-items:center; justify-content:flex-end; padding:14px 20px; gap:8px; font-size:13px; color:var(--t3); }
+  .pg-sel { height:30px; border:1px solid var(--line); border-radius:var(--radius-sm); font-size:13px; color:var(--t3); padding:0 6px; background:var(--surface); cursor:pointer;
+    appearance:none; -webkit-appearance:none; padding-right:24px;
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a8abb2' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 7px center; }
+  .pg-num { min-width:28px; height:28px; line-height:26px; text-align:center; border-radius:var(--radius-sm); cursor:pointer; font-size:13px; padding:0 4px; transition:all .15s; font-variant-numeric:tabular-nums; }
+  .pg-num:hover { color:var(--primary); background:var(--primary-bg); }
+  .pg-num.on { background:var(--primary); color:#fff; font-weight:600; }
+  .pg-arrow { width:28px; height:28px; display:flex; align-items:center; justify-content:center; color:var(--t3); cursor:pointer; border-radius:var(--radius-sm); transition:all .15s; }
+  .pg-arrow:hover:not(.disabled) { color:var(--primary); background:var(--primary-bg); }
+  .pg-arrow .ic { width:13px; height:13px; }
+  .pg-arrow.disabled { color:#c0c4cc; cursor:not-allowed; }
+  .pg-goto { width:44px; height:30px; border:1px solid var(--line); border-radius:var(--radius-sm); text-align:center; font-size:13px; color:var(--t3); outline:none; transition:border-color .2s, box-shadow .2s; }
+  .pg-goto:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(var(--primary-rgb),.12); }
+
+  /* ============ 实体运输业务看板 ============ */
+  .kpi-row { display:flex; gap:12px; margin-bottom:12px; }
+  .kpi-card { flex:1; display:flex; align-items:center; gap:14px; background:var(--surface); border-radius:var(--radius-lg); border:1px solid var(--line-light); box-shadow:var(--shadow-1); padding:18px 20px; min-width:0; transition:box-shadow .2s, border-color .2s; }
+  .kpi-card:hover { box-shadow:var(--shadow-2); border-color:rgba(var(--primary-rgb),.30); }
+  .kpi-ic { width:46px; height:46px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#fff; flex:none; }
+  .kpi-ic .ic { width:22px; height:22px; }
+  .k-blue   { background:linear-gradient(135deg,#5cadff,#2f7bf0); }
+  .k-cyan   { background:linear-gradient(135deg,#4dd8c6,#18b2a3); }
+  .k-orange { background:linear-gradient(135deg,#ffc26e,#f29b2e); }
+  .k-purple { background:linear-gradient(135deg,#b08cff,#7d5be0); }
+  .k-green  { background:linear-gradient(135deg,#7ed67f,#3faf55); }
+  .kpi-txt { min-width:0; flex:1; }
+  .kpi-label { font-size:12.5px; color:var(--t4); margin-bottom:6px; white-space:nowrap; }
+  .kpi-value { display:flex; align-items:center; gap:8px; font-family:var(--font-num); font-size:24px; font-weight:600; color:var(--t1); line-height:1.15; letter-spacing:.3px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .kpi-value.green { color:var(--up); }
+  .kpi-sub { font-size:11.5px; color:var(--t5); margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  /* 环比胶囊(较上期) */
+  .delta { display:inline-flex; align-items:center; gap:3px; height:20px; padding:0 7px; border-radius:10px; font-family:var(--font-num); font-size:12px; font-weight:600; line-height:1; font-variant-numeric:tabular-nums; }
+  .delta .ic { width:11px; height:11px; stroke-width:2.6; }
+  .delta.up   { color:var(--up);   background:var(--success-bg); }
+  .delta.down { color:var(--down); background:var(--danger-bg); }
+
+  .dash-head { display:flex; align-items:center; padding:16px 20px 14px; }
+  .dash-title { position:relative; font-size:16px; font-weight:600; color:var(--t1); padding-left:11px; }
+  .dash-title::before { content:''; position:absolute; left:0; top:50%; transform:translateY(-50%); height:15px; width:4px; border-radius:2px; background:var(--primary); }
+  .dash-tag { margin-left:10px; font-size:12px; color:var(--primary); background:var(--primary-bg); border:1px solid var(--primary-bg-deep); padding:2px 9px; border-radius:10px; font-weight:500; }
+  .dash-range { margin-left:8px; font-size:12px; color:var(--t4); }
+  .dash-query { margin-left:auto; display:flex; align-items:center; gap:8px; }
+  .dq-label { font-size:13px; color:var(--t3); white-space:nowrap; }
+  .dq-input { height:32px; border:1px solid var(--line); border-radius:var(--radius-sm); padding:0 10px; font-size:13px; color:var(--t3); font-family:inherit; outline:none; background:var(--surface); transition:border-color .2s, box-shadow .2s; }
+  .dq-input:hover { border-color:#c0c4cc; }
+  .dq-input:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(var(--primary-rgb),.12); }
+  .dq-btn { height:32px; padding:0 12px; border:1px solid var(--line); background:var(--surface); color:var(--t3); font-size:13px; border-radius:var(--radius-sm); cursor:pointer; transition:all .15s; }
+  .dq-btn:hover { color:var(--primary); border-color:var(--primary-line); background:var(--primary-bg); }
+  .dq-btn.is-current { display:none; }
+  .pbtns { margin-left:14px; display:flex; border:1px solid var(--line); border-radius:var(--radius-sm); overflow:hidden; }
+  .pbtn { height:30px; padding:0 18px; border:none; border-left:1px solid var(--line); background:var(--surface); color:var(--t3); font-size:13px; font-weight:500; cursor:pointer; transition:all .15s; }
+  .pbtn:first-child { border-left:none; }
+  .pbtn:hover { color:var(--primary); background:var(--primary-bg); }
+  .pbtn.is-active, .pbtn.is-active:hover { background:var(--primary); color:#fff; }
+  .dash-controls { margin-left:14px; display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+
+  /* 项目视角下拉 */
+  .proj-drop { position:relative; }
+  .proj-btn { height:28px; padding:0 12px; display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); background:var(--surface); color:var(--t3); font-size:12.5px; border-radius:var(--radius-sm); cursor:pointer; transition:all .15s; }
+  .proj-btn:hover { color:var(--primary); border-color:var(--primary-line); background:var(--primary-bg); }
+  .proj-btn.has-sel { color:var(--primary); border-color:var(--primary-line); background:var(--primary-bg); font-weight:500; }
+  .proj-btn .chev { width:11px; height:11px; transition:transform .2s; }
+  .proj-drop.open .proj-btn .chev { transform:rotate(180deg); }
+  .proj-menu { display:none; position:absolute; right:0; top:calc(100% + 6px); min-width:160px; background:var(--surface); border:1px solid var(--line-light); border-radius:var(--radius); box-shadow:0 6px 20px rgba(31,45,61,.14); padding:5px; z-index:30; animation:fadeUp .18s cubic-bezier(.22,.61,.36,1) both; }
+  .proj-drop.open .proj-menu { display:block; }
+  .proj-item { display:flex; align-items:center; gap:8px; width:100%; height:32px; padding:0 10px; border:none; background:none; color:var(--t3); font-size:13px; text-align:left; border-radius:var(--radius-sm); cursor:pointer; transition:background .12s,color .12s; }
+  .proj-item:hover { background:var(--primary-bg); color:var(--primary); }
+  .proj-item.is-active { background:var(--primary-bg); color:var(--primary); font-weight:600; }
+  .proj-item.is-active::after { content:'✓'; margin-left:auto; font-size:12px; }
+  .proj-item .dot { width:8px; height:8px; border-radius:50%; flex:none; }
+  /* 项目名下钻(表格内) */
+  .proj-link { color:var(--primary); cursor:pointer; }
+  .proj-link:hover { text-decoration:underline; text-underline-offset:3px; }
+  .lg-row.clickable { cursor:pointer; }
+  .dash-wrap { overflow-x:auto; border-top:1px solid #f0f2f5; }
+  table.report { border-collapse:separate; border-spacing:0; table-layout:fixed; }
+  table.report th { position:relative; background:var(--th-bg); color:#33475e; font-weight:600; font-size:12.5px; padding:9px 12px; text-align:center; line-height:1.45; border-bottom:1px solid var(--th-bd); border-right:1px solid var(--th-bd); white-space:nowrap; }
+  table.report th.rowspan2 { vertical-align:middle; }
+  table.report th.subth { font-weight:400; font-size:12px; color:#7d8ea3; background:var(--th-sub); padding:7px 12px; white-space:nowrap; }
+  table.report td { background:var(--surface); height:42px; padding:0 12px; font-size:13px; color:var(--t3); border-bottom:1px solid var(--line-light); border-right:1px solid var(--line-lighter); }
+  table.report tbody tr:nth-child(even):not(.total-row) td { background:#fafbfd; }
+  table.report td.right { text-align:right; font-variant-numeric:tabular-nums; }
+  table.report tr.total-row td { font-weight:600; color:var(--t2); background:#f3f7fd; border-top:1px solid #d3e2f6; border-bottom:none; }
+  table.report td.no-data { text-align:center; padding:52px 0; color:var(--t4); font-size:13px; border-right:none; }
+  table.report tbody tr:hover td { background:var(--bg-hover); }
+  table.report tbody tr.total-row:hover td { background:#f3f7fd; }
+
+  /* 悬浮客服 */
+  .float-assistant { position:fixed; right:26px; bottom:84px; width:46px; height:46px; border-radius:50%; background:#fff; box-shadow:0 3px 14px rgba(0,21,41,.18); display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:20; user-select:none; color:#2f7bf0; transition:transform .2s, box-shadow .2s; }
+  .float-assistant:hover { transform:translateY(-3px); box-shadow:0 6px 18px rgba(47,123,240,.28); }
+  .float-assistant .ic { width:22px; height:22px; }
+
+  /* ============ 动效(克制:只用于传达状态与层次) ============ */
+  @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+  @keyframes rowIn  { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+  @keyframes popIn  { from { opacity:0; transform:scale(.55); } to { opacity:1; transform:scale(1); } }
+  @keyframes barIn  { from { transform:scaleY(0); } to { transform:scaleY(1); } }
+  @keyframes ripple { to { transform:scale(30); opacity:0; } }
+  @keyframes ringSwing { 0%,100%{transform:rotate(0)} 12%{transform:rotate(14deg)} 24%{transform:rotate(-12deg)} 36%{transform:rotate(9deg)} 48%{transform:rotate(-6deg)} 60%{transform:rotate(3deg)} 72%{transform:rotate(0)} }
+  @keyframes dotPulse { 0%{box-shadow:0 0 0 0 rgba(245,108,108,.45)} 70%{box-shadow:0 0 0 6px rgba(245,108,108,0)} 100%{box-shadow:0 0 0 0 rgba(245,108,108,0)} }
+  @keyframes floatPulse { 0%{box-shadow:0 3px 14px rgba(0,21,41,.18),0 0 0 0 rgba(var(--primary-rgb),.30)} 70%{box-shadow:0 3px 14px rgba(0,21,41,.18),0 0 0 10px rgba(var(--primary-rgb),0)} 100%{box-shadow:0 3px 14px rgba(0,21,41,.18),0 0 0 0 rgba(var(--primary-rgb),0)} }
+  @keyframes icGlow { 0%,100%{box-shadow:0 0 0 0 transparent} 50%{box-shadow:0 0 0 5px var(--glow-soft), 0 3px 12px var(--glow)} }
+  @keyframes sheen { to { transform:translateX(110%); } }
+
+  /* 视图切换:淡入上浮(display 切换时自动重放) */
+  section[id^="view-"] { animation: fadeUp .32s cubic-bezier(.22,.61,.36,1) both; }
+
+  /* KPI 卡片:错落入场 + 图标回弹 + 环比胶囊弹出 */
+  .kpi-card { animation: fadeUp .4s cubic-bezier(.22,.61,.36,1) both; }
+  .kpi-card:nth-child(2) { animation-delay:.06s; }
+  .kpi-card:nth-child(3) { animation-delay:.12s; }
+  .kpi-card:nth-child(4) { animation-delay:.18s; }
+  .kpi-card:nth-child(5) { animation-delay:.24s; }
+  /* 图标:不倾斜,改为同色辉光呼吸(五卡错落节拍),悬停时辉光增强 */
+  .kpi-card:nth-child(1) { --glow:rgba(47,123,240,.42); --glow-soft:rgba(47,123,240,.16); }
+  .kpi-card:nth-child(2) { --glow:rgba(24,178,163,.42); --glow-soft:rgba(24,178,163,.16); }
+  .kpi-card:nth-child(3) { --glow:rgba(242,155,46,.42); --glow-soft:rgba(242,155,46,.16); }
+  .kpi-card:nth-child(4) { --glow:rgba(125,91,224,.42); --glow-soft:rgba(125,91,224,.16); }
+  .kpi-card:nth-child(5) { --glow:rgba(63,175,85,.42);  --glow-soft:rgba(63,175,85,.16); }
+  .kpi-ic { transition:box-shadow .3s ease, transform .3s ease; animation:icGlow 4.2s ease-in-out infinite; }
+  .kpi-card:nth-child(2) .kpi-ic { animation-delay:.5s; }
+  .kpi-card:nth-child(3) .kpi-ic { animation-delay:1s; }
+  .kpi-card:nth-child(4) .kpi-ic { animation-delay:1.5s; }
+  .kpi-card:nth-child(5) .kpi-ic { animation-delay:2s; }
+  .kpi-card:hover .kpi-ic { animation-play-state:paused; box-shadow:0 0 0 5px var(--glow-soft), 0 4px 16px var(--glow); transform:scale(1.05); }
+
+  /* 卡片:悬停时一道同色斜向扫光掠过(科技感) */
+  .kpi-card { position:relative; overflow:hidden; }
+  .kpi-card::after {
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(105deg, transparent 42%, var(--glow-soft) 50%, transparent 58%);
+    transform:translateX(-110%);
+  }
+  .kpi-card:hover::after { animation:sheen .85s ease-out; }
+  .delta { animation: popIn .35s cubic-bezier(.34,1.56,.64,1) .5s both; }
+
+  /* 表格行:按行号错落渐入(--r 为行序) */
+  table.data tbody tr, table.report tbody tr { animation: rowIn .28s cubic-bezier(.22,.61,.36,1) both; animation-delay:calc(var(--r,0) * 24ms); }
+
+  /* 侧边菜单:图标微移 + 选中指示条展开 */
+  .menu-link .ic { transition:transform .18s ease; }
+  .menu-link:hover > .ic:first-child { transform:translateX(2px); }
+  .menu-link.active::before { transform-origin:center; animation: barIn .22s ease-out; }
+
+  /* 通知铃:悬停摇铃,红点呼吸 */
+  .bell:hover .ic { transform-origin:50% 4px; animation: ringSwing .9s ease-in-out; }
+  .bell .dot { animation: dotPulse 2.6s ease-out 1.6s infinite; }
+
+  /* 悬浮客服:呼吸光环 */
+  .float-assistant { animation: floatPulse 3.2s ease-out 2s infinite; }
+
+  /* 按钮:按下水波纹 */
+  .btn, .pbtn { position:relative; overflow:hidden; }
+  .btn:active::after, .pbtn:active::after {
+    content:''; position:absolute; left:50%; top:50%; width:10px; height:10px; margin:-5px;
+    border-radius:50%; background:rgba(var(--primary-rgb),.30); transform:scale(0); opacity:.7;
+    animation:ripple .55s ease-out; pointer-events:none;
+  }
+  .btn-primary:active::after, .pbtn.is-active:active::after { background:rgba(255,255,255,.5); }
+
+  /* ============ 图表视图(实体运输业务看板) ============ */
+  .view-toggle { height:32px; padding:0 12px; display:inline-flex; align-items:center; gap:6px; margin-left:12px; border:1px solid var(--line); background:var(--surface); color:var(--t3); font-size:13px; border-radius:var(--radius-sm); cursor:pointer; transition:all .15s; position:relative; overflow:hidden; }
+  .view-toggle .ic { width:14px; height:14px; }
+  .view-toggle:hover { color:var(--primary); border-color:var(--primary-line); background:var(--primary-bg); }
+  .view-toggle:active { transform:translateY(1px); }
+  .view-toggle.is-on { background:var(--primary); border-color:var(--primary); color:#fff; box-shadow:0 2px 8px rgba(var(--primary-rgb),.35); }
+  .view-toggle.is-on:hover { background:var(--primary-hover); border-color:var(--primary-hover); }
+
+  .charts-pane { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; padding:14px 16px 16px; border-top:1px solid #f0f2f5; }
+  .chart-panel { position:relative; border:1px solid var(--line-lighter); border-radius:var(--radius-lg); background:linear-gradient(180deg,#fcfdff,#fff); padding:12px 14px 6px; min-width:0; animation:fadeUp .35s cubic-bezier(.22,.61,.36,1) both; }
+  .chart-panel:nth-child(2) { animation-delay:.05s; }
+  .chart-panel:nth-child(3) { animation-delay:.1s; }
+  .chart-panel:nth-child(4) { animation-delay:.15s; }
+  .chart-panel.tall { grid-column:1/-1; }
+  .chart-head { display:flex; align-items:baseline; gap:8px; }
+  .chart-title { display:inline-flex; align-items:center; gap:5px; font-size:13.5px; font-weight:600; color:var(--t2); }
+  .ct-ic { width:14px; height:14px; color:var(--primary); }
+  .chart-unit { margin-left:auto; font-size:11px; color:var(--t5); }
+  /* 趋势下钻:维度切换胶囊(运量/订单量/订单金额/收入/成本/利润/利润率) */
+  .dim-chips { display:flex; align-items:center; gap:6px; margin-left:12px; flex-wrap:wrap; align-self:center; }
+  .dim-chip { height:24px; padding:0 10px; display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--t3); background:var(--surface); border:1px solid var(--line); border-radius:12px; cursor:pointer; transition:color .15s, border-color .15s, background .15s; }
+  .dim-chip .d-dot { width:7px; height:7px; border-radius:50%; background:var(--dc,#409eff); flex:none; }
+  .dim-chip:hover { color:var(--dc); border-color:var(--dc); }
+  .dim-chip.on { color:var(--dc); border-color:var(--dc); background:var(--dcs,#ecf5ff); font-weight:600; }
+  .chart-body { position:relative; }
+  #trendBox { height:250px; }
+  #bizBox, #transBox, #profitBox { height:232px; }
+  #transBox { flex-direction:column; justify-content:center; gap:6px; }
+  .donut-flex { display:flex; align-items:center; gap:6px; height:100%; }
+  .donut-flex svg { flex:none; }
+  .lg { flex:1; min-width:0; display:flex; flex-direction:column; gap:7px; padding-left:4px; }
+  .lg-row { display:flex; align-items:center; gap:7px; font-size:12px; color:var(--t3); cursor:default; padding:2px 4px; border-radius:4px; transition:background .15s; }
+  .lg-row:hover { background:var(--bg-hover); }
+  .lg-row i { width:9px; height:9px; border-radius:3px; flex:none; }
+  .lg-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lg-val { margin-left:auto; font-family:var(--font-num); font-weight:600; color:var(--t2); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .lg-pct { width:46px; text-align:right; color:var(--t5); font-variant-numeric:tabular-nums; font-family:var(--font-num); }
+  /* 运输方式:并排双环(左=订单数量/右=利润占比) + 下方横排图例 */
+  .donut-pair { display:flex; align-items:center; justify-content:center; gap:16px; flex:none; }
+  .lg-wide { width:100%; gap:3px; flex:none; }
+  .lg-row2 { display:flex; align-items:center; gap:7px; font-size:12px; color:var(--t3); padding:2px 4px; border-radius:4px; transition:background .15s; }
+  .lg-row2:hover { background:var(--bg-hover); }
+  .lg-row2 i { width:9px; height:9px; border-radius:3px; flex:none; }
+  .lg-row2 .o { margin-left:auto; color:var(--t4); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .lg-row2 .p { width:132px; text-align:right; color:var(--t4); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .lg-row2 b { font-family:var(--font-num); font-weight:600; color:var(--t2); }
+  .chart-tip { position:fixed; z-index:99; pointer-events:none; background:rgba(31,45,61,.94); color:#fff; padding:7px 10px; border-radius:6px; font-size:12px; line-height:1.55; opacity:0; transition:opacity .15s; box-shadow:0 4px 14px rgba(0,21,41,.25); max-width:260px; }
+  .chart-tip b { font-family:var(--font-num); }
+  svg text { font-family:var(--font-num); }
+  .hp { cursor:pointer; }
+  .dn-seg { transition:stroke-width .18s; cursor:pointer; }
+  .bar-rect { transition:opacity .15s, filter .15s; cursor:pointer; }
+  .bar-rect:hover { filter:brightness(1.12); }
+
+  /* ============ 图表全屏展示(:fullscreen 原生全屏 / .faux-fs 降级铺满) ============ */
+  .dash-card:fullscreen, .dash-card.faux-fs {
+    background:var(--surface); border:none; border-radius:0;
+    display:flex; flex-direction:column; overflow:auto; padding:2px 14px 14px; z-index:60;
+  }
+  .dash-card.faux-fs { position:fixed; inset:0; }
+  .dash-card:fullscreen .dash-head, .dash-card.faux-fs .dash-head { flex:none; }
+  .dash-card:fullscreen .charts-pane, .dash-card.faux-fs .charts-pane { flex:1; grid-template-rows:minmax(280px,1.1fr) minmax(260px,1fr); }
+  .dash-card:fullscreen .chart-panel, .dash-card.faux-fs .chart-panel { display:flex; flex-direction:column; }
+  .dash-card:fullscreen .chart-body, .dash-card.faux-fs .chart-body { flex:1; min-height:0; }
+  .dash-card:fullscreen .donut-flex svg, .dash-card.faux-fs .donut-flex svg { width:200px; height:200px; }
+  .dash-card:fullscreen .lg, .dash-card.faux-fs .lg { gap:12px; }
+  .dash-card:fullscreen .lg-row, .dash-card.faux-fs .lg-row { font-size:13.5px; padding:4px 6px; }
+
+  /* 尊重系统"减少动态效果"设置 */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation:none !important; transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ SVG 图标库 ============ -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 9.5 12 3l9 6.5V20a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 20Z"/><path d="M9 21.5v-8h6v8"/></symbol>
+  <symbol id="i-plant" viewBox="0 0 24 24"><path d="M3 21V8.5L12 3l9 5.5V21"/><path d="M7 21v-7h10v7"/><path d="M7 17.5h10"/></symbol>
+  <symbol id="i-order" viewBox="0 0 24 24"><path d="M9 4H6a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><rect x="9" y="2.5" width="6" height="3.5" rx="1"/><path d="M8 11.5h8M8 15.5h5"/></symbol>
+  <symbol id="i-waybill" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></symbol>
+  <symbol id="i-screen" viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+  <symbol id="i-truck" viewBox="0 0 24 24"><path d="M1.5 5.5h13v11h-13z"/><path d="M14.5 9.5h4l3.5 3.5v3.5h-7.5"/><circle cx="6" cy="18.5" r="2"/><circle cx="17.5" cy="18.5" r="2"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 4 2.2 18a2 2 0 0 0 1.7 3h16.2a2 2 0 0 0 1.7-3L13.7 4a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4.5M12 17.5v.01"/></symbol>
+  <symbol id="i-pay" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="13" rx="2"/><path d="M17 12.5h2.5"/><path d="M6.5 6V4.8A1.8 1.8 0 0 1 8.3 3h8.4"/></symbol>
+  <symbol id="i-cust" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.8a3.5 3.5 0 0 1 0 6.4M21.5 20a6.5 6.5 0 0 0-4.5-6.2"/></symbol>
+  <symbol id="i-res" viewBox="0 0 24 24"><path d="M21 15.5V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v7.5a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7Z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/></symbol>
+  <symbol id="i-car" viewBox="0 0 24 24"><path d="M4.5 11.5 6 7.3a2 2 0 0 1 1.9-1.3h8.2a2 2 0 0 1 1.9 1.3l1.5 4.2"/><rect x="3" y="11.5" width="18" height="5.5" rx="1.5"/><path d="M6.5 17v2M17.5 17v2"/><path d="M6.5 14.3h2M15.5 14.3h2"/></symbol>
+  <symbol id="i-baseset" viewBox="0 0 24 24"><path d="M4 21v-6M4 11V3M12 21v-9M12 8V3M20 21v-4M20 13V3"/><path d="M1.5 15h5M9.5 8h5M17.5 17h5"/></symbol>
+  <symbol id="i-report" viewBox="0 0 24 24"><path d="M5 20v-7M11 20V5M17 20v-10"/><path d="M3 20h18"/></symbol>
+  <symbol id="i-dscreen" viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M6.5 13l3-3 2.5 2 4.5-5"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24"><path d="M2.5 17.5 9 11l4 4 8.5-8.5"/><path d="M15.5 6.5h6v6"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 7.5l3 4.5 3-4.5M12 12v5.5M9.3 13.5h5.4M9.3 16.2h5.4"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></symbol>
+  <symbol id="i-calc" viewBox="0 0 24 24"><rect x="5" y="2.5" width="14" height="19" rx="2"/><path d="M8.5 6.5h7"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01M8.5 14.5h.01M12 14.5h.01M15.5 14.5h.01M8.5 18h.01M12 18h.01M15.5 18h.01"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4.5 19a9 9 0 1 1 15 0"/><path d="M12 14l4.2-4.6"/><circle cx="12" cy="14" r="1.4"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v3M12 18.2v3M21.2 12h-3M5.8 12h-3M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1M18.5 18.5l-2.1-2.1M7.6 7.6 5.5 5.5"/></symbol>
+  <symbol id="i-chevd" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-chevr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M3.5 6h17M3.5 12h17M3.5 18h17"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8.5a6 6 0 0 0-12 0c0 6.5-2.5 8.5-2.5 8.5h17S18 15 18 8.5"/><path d="M13.7 20.5a2 2 0 0 1-3.4 0"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21.5 4.5V10H16"/><path d="M2.5 19.5V14H8"/><path d="M4.6 9.5A8 8 0 0 1 18 6.5l3.5 3.5M2.5 14 6 17.5a8 8 0 0 0 13.4-3"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></symbol>
+  <symbol id="i-export" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M11 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-6"/><path d="M18 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4Z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4a1.5 1.5 0 0 1 1.5-1.5h5A1.5 1.5 0 0 1 16 4v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M1.5 12S5.5 4.5 12 4.5 22.5 12 22.5 12 18.5 19.5 12 19.5 1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="17" rx="2"/><path d="M16 2.5v4M8 2.5v4M3 10h18"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-arrup" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+  <symbol id="i-arrdwn" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 13.6h5l1.6 2.9h4.8l1.6-2.9h5"/><path d="M5.3 4.8h13.4l2.3 8.8v4.6a1.8 1.8 0 0 1-1.8 1.8H4.8a1.8 1.8 0 0 1-1.8-1.8v-4.6Z"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.5h18M9.5 9.5V20M15.5 9.5V20"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3.5 3.5v15.5a1.5 1.5 0 0 0 1.5 1.5h15.5"/><path d="M7.5 14.5l4-4.5 3 2.5 5.5-6.5"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M9 3.5H3.5V9M15 3.5h5.5V9M3.5 15v5.5H9M20.5 15v5.5H15"/></symbol>
+  <symbol id="i-collapse" viewBox="0 0 24 24"><path d="M3.5 9H9V3.5M20.5 9H15V3.5M3.5 15H9v5.5M20.5 15H15v5.5"/></symbol>
+</svg>
+
+<!-- ============ 左侧菜单 ============ -->
+<aside class="sidebar">
+  <div class="logo">
+    <svg class="logo-ic" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="16.5" fill="none" stroke="#3d7fff" stroke-width="3"/>
+      <ellipse cx="20" cy="20" rx="15" ry="6.5" fill="none" stroke="#3d7fff" stroke-width="2" transform="rotate(-25 20 20)"/>
+      <circle cx="20" cy="20" r="4.2" fill="#3d7fff"/>
+    </svg>
+    <div class="logo-txt"><b>一机集团</b><span>智慧物流管理平台</span></div>
+  </div>
+  <nav>
+    <ul>
+      <li><a class="menu-link lv1"><svg class="ic"><use href="#i-home"/></svg><span>工作台</span></a></li>
+      <li><a class="menu-link lv1"><svg class="ic"><use href="#i-plant"/></svg><span>厂内运输管理</span><svg class="ic chev down"><use href="#i-chevd"/></svg></a></li>
+      <li><a class="menu-link lv1 active" data-page="orders"><svg class="ic"><use href="#i-order"/></svg><span>订单管理</span></a></li>
+      <li><a class="menu-link lv1"><svg class="ic"><use href="#i-waybill"/></svg><span>运单管理</span></a></li>
+      <li><a class="menu-link lv1"><svg class="ic"><use href="#i-screen"/></svg><span>数构大屏</span><svg class="ic chev"><use href="#i-chevr"/></svg></a></li>
+      <li class="open" id="li-out">
+        <a class="menu-link lv1 lit" id="m-out"><svg class="ic"><use href="#i-truck"/></svg><span>厂外运输管理</span><svg class="ic chev down"><use href="#i-chevd"/></svg></a>
+        <ul class="sub">
+          <li><a class="menu-link lv2"><svg class="ic"><use href="#i-alert"/></svg><span>异常管理</span></a></li>
+          <li><a class="menu-link lv2"><svg class="ic"><use href="#i-pay"/></svg><span>应付管理</span></a></li>
+          <li><a class="menu-link lv2"><svg class="ic"><use href="#i-wallet"/></svg><span>应收管理</span></a></li>
+          <li><a class="menu-link lv2"><svg class="ic"><use href="#i-cust"/></svg><span>客户管理</span></a></li>
+          <li><a class="menu-link lv2"><svg class="ic"><use href="#i-res"/></svg><span>资源管理</span></a></li>
+          <li><a class="menu-link lv2"><svg class="ic"><use href="#i-car"/></svg><span>车智中心</span></a></li>
+          <li><a class="menu-link lv2"><svg class="ic"><use href="#i-baseset"/></svg><span>基础设置</span></a></li>
+          <li class="open" id="li-report">
+            <a class="menu-link lv2" id="m-report"><svg class="ic"><use href="#i-report"/></svg><span>报表管理</span><svg class="ic chev down"><use href="#i-chevd"/></svg></a>
+            <ul class="sub">
+              <li><a class="menu-link lv3"><svg class="ic"><use href="#i-dscreen"/></svg><span>数据大屏</span></a></li>
+              <li><a class="menu-link lv3"><svg class="ic"><use href="#i-trend"/></svg><span>经营报表</span></a></li>
+              <li><a class="menu-link lv3"><svg class="ic"><use href="#i-coin"/></svg><span>财务报表</span></a></li>
+              <li><a class="menu-link lv3"><svg class="ic"><use href="#i-doc"/></svg><span>运营报表</span></a></li>
+              <li><a class="menu-link lv3"><svg class="ic"><use href="#i-calc"/></svg><span>厂内结算报表</span></a></li>
+              <li><a class="menu-link lv3" data-page="dash"><svg class="ic"><use href="#i-gauge"/></svg><span>实体运输业务看板</span></a></li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+      <li><a class="menu-link lv1"><svg class="ic"><use href="#i-gear"/></svg><span>系统设置</span><svg class="ic chev down"><use href="#i-chevd"/></svg></a></li>
+    </ul>
+  </nav>
+</aside>
+
+<!-- ============ 右侧 ============ -->
+<div class="layout">
+  <!-- 头部 -->
+  <header class="header">
+    <span class="hamb"><svg class="ic" style="width:18px;height:18px"><use href="#i-menu"/></svg></span>
+    <div class="crumb" id="crumb"><span>首页</span><span class="sep">/</span><span>厂外运输管理</span><span class="sep">/</span><span class="cur">订单管理</span></div>
+    <div class="header-right">
+      <span class="bell"><svg class="ic" style="width:17px;height:17px"><use href="#i-bell"/></svg><i class="dot"></i></span>
+      <span class="user-info">数构公司 / 张宸浩
+        <span class="avatar"><svg class="ic"><use href="#i-user"/></svg></span>
+        <svg class="ic caret"><use href="#i-chevd"/></svg>
+      </span>
+    </div>
+  </header>
+
+  <!-- 页签 -->
+  <div class="tabsbar" id="tabsbar">
+    <div class="tag">工作台</div>
+    <div class="tag">订单管理<i class="x">×</i></div>
+    <div class="tag">运单管理<i class="x">×</i></div>
+    <div class="tag">追单管理<i class="x">×</i></div>
+    <div class="tag">车辆看板<i class="x">×</i></div>
+    <div class="tag">车辆管理<i class="x">×</i></div>
+    <div class="tag">开票管理<i class="x">×</i></div>
+    <div class="tag">对账单管理<i class="x">×</i></div>
+    <div class="tag">收入账单<i class="x">×</i></div>
+    <div class="tag">运单管理<i class="x">×</i></div>
+    <div class="tag on" id="tag-orders" data-page="orders">订单管理<i class="x">×</i></div>
+    <div class="tag">派车单管理<i class="x">×</i></div>
+  </div>
+
+  <!-- 内容 -->
+  <main class="content">
+
+    <!-- ======== 视图：订单管理（原页面） ======== -->
+    <section id="view-orders">
+      <div class="card filter-card">
+        <div class="f-row">
+          <div class="f-item"><label class="f-label">订单号</label><input class="ipt w-lg" id="f-no" placeholder="请输入订单号"></div>
+          <div class="f-item"><label class="f-label">客户简称</label><input class="ipt" id="f-cust" placeholder="请输入客户简称"></div>
+          <div class="f-item"><label class="f-label">项目名称</label><input class="ipt" id="f-proj" placeholder="请输入项目名称"></div>
+          <div class="f-item"><label class="f-label">订单状态</label>
+            <select class="ipt" id="f-st"><option value="">请选择订单状态</option><option>待发货</option><option>已发货</option></select></div>
+          <button class="btn btn-primary" id="btnSearch" style="margin-left:auto"><svg class="ic"><use href="#i-search"/></svg>查询</button>
+        </div>
+        <div class="f-row">
+          <div class="f-item"><label class="f-label">下发状态</label>
+            <select class="ipt" id="f-dst"><option value="">请选择下发状态</option><option>下发成功</option><option>下发失败</option></select></div>
+          <div class="f-item"><label class="f-label">装货地</label><input class="ipt" id="f-load" placeholder="请输入装货地"></div>
+          <div class="f-item"><label class="f-label">运输方式</label>
+            <select class="ipt" id="f-trans"><option value="">请选择运输方式</option><option>零担</option><option>干线</option><option>包车</option></select></div>
+          <button class="btn" id="btnReset" style="margin-left:auto"><svg class="ic"><use href="#i-refresh"/></svg>重置</button>
+        </div>
+        <div class="f-row">
+          <div class="f-item"><label class="f-label">收货地</label><input class="ipt w-md" id="f-recv" placeholder="请输入收货地"></div>
+          <div class="f-item"><label class="f-label">创建日期</label>
+            <div class="daterange"><svg class="ic"><use href="#i-cal"/></svg><span>2026-09-18</span><span class="dash">-</span><span>2026-09-24</span></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="tbl-toolbar">
+          <span class="tt-title">订单管理</span>
+          <span class="tt-count">已选中 <b id="selCount">0</b> 条</span>
+          <div class="tt-btns">
+            <button class="btn btn-primary">新增</button>
+            <button class="btn btn-blue-light"><svg class="ic"><use href="#i-down"/></svg>下载订单</button>
+            <button class="btn"><svg class="ic"><use href="#i-export"/></svg>导出</button>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table class="data" style="width:1640px">
+            <colgroup>
+              <col style="width:42px"><col style="width:50px"><col style="width:128px"><col style="width:82px"><col style="width:92px">
+              <col style="width:80px"><col style="width:104px"><col style="width:104px"><col style="width:76px"><col style="width:124px">
+              <col style="width:112px"><col style="width:78px"><col style="width:108px"><col style="width:118px"><col style="width:108px">
+              <col style="width:78px"><col style="width:158px">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="center"><input type="checkbox" class="chk" id="chkAll"></th>
+                <th>序号</th><th>订单号</th><th>订单状态</th><th>订单下发状态</th><th>客户简称</th><th>项目名称</th><th>部门名称</th>
+                <th>运输方式</th><th>装货地</th><th>装货详细地址</th><th>装货联系人</th><th>装货联系电话</th>
+                <th>收货地</th><th>收货详细地址</th><th>收货联系人</th><th class="ops">操作</th>
+              </tr>
+            </thead>
+            <tbody id="orderBody"></tbody>
+          </table>
+        </div>
+        <div class="pgbar">
+          <span>共 <b id="totalCount">37</b> 条</span>
+          <select class="pg-sel"><option>10条/页</option><option>20条/页</option><option>50条/页</option></select>
+          <span class="pg-arrow disabled"><svg class="ic" style="transform:rotate(180deg)"><use href="#i-chevr"/></svg></span>
+          <span class="pg-num on">1</span><span class="pg-num">2</span><span class="pg-num">3</span><span class="pg-num">4</span>
+          <span class="pg-arrow"><svg class="ic"><use href="#i-chevr"/></svg></span>
+          <span>前往</span><input class="pg-goto" value="1"><span>页</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======== 视图：实体运输业务看板 ======== -->
+    <section id="view-dashboard" style="display:none">
+      <div class="kpi-row" id="kpiRow"></div>
+      <div class="card dash-card" id="dashCard">
+        <div class="dash-head">
+          <span class="dash-title">实体运输业务看板</span>
+          <span class="dash-tag" id="dashPeriod">日报</span>
+          <span class="dash-range" id="dashRange"></span>
+          <button class="view-toggle" id="btnChartToggle"><svg class="ic"><use href="#i-chart"/></svg><span>图表视图</span></button>
+          <button class="view-toggle" id="btnFullscreen" style="display:none" title="全屏展示图表"><svg class="ic"><use href="#i-expand"/></svg><span>全屏展示</span></button>
+          <div class="dash-query">
+            <span class="dq-label">查询往期</span>
+            <span id="dqHolder"></span>
+            <button class="dq-btn is-current" id="dqBack">回到本期</button>
+          </div>
+          <div class="dash-controls">
+            <div class="pbtns">
+              <button class="pbtn is-active" data-p="day">日报</button>
+              <button class="pbtn" data-p="week">周报</button>
+              <button class="pbtn" data-p="month">月报</button>
+              <button class="pbtn" data-p="year">年报</button>
+            </div>
+            <div class="proj-drop" id="projDrop">
+              <button class="proj-btn" id="projBtn" title="按项目筛选看板">
+                <span id="projBtnLabel">项目视角:全部</span>
+                <svg class="ic chev"><use href="#i-chevd"/></svg>
+              </button>
+              <div class="proj-menu" id="projMenu">
+                <button class="proj-item is-active" data-proj=""><i class="dot" style="background:var(--primary)"></i>全部项目</button>
+                <button class="proj-item" data-proj="路通弹簧公司"><i class="dot" style="background:#409eff"></i>路通弹簧公司</button>
+                <button class="proj-item" data-proj="桥箱公司"><i class="dot" style="background:#18b2a3"></i>桥箱公司</button>
+                <button class="proj-item" data-proj="三分公司"><i class="dot" style="background:#f29b2e"></i>三分公司</button>
+                <button class="proj-item" data-proj="一分公司"><i class="dot" style="background:#7d5be0"></i>一分公司</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dash-wrap" id="tableWrap">
+          <table class="report" id="reportTable"></table>
+        </div>
+        <div class="charts-pane" id="chartView" style="display:none">
+          <section class="chart-panel tall">
+            <div class="chart-head"><span class="chart-title"><svg class="ic ct-ic" id="trendIc"><use href="#i-trend"/></svg><span id="trendTitle">运量趋势</span></span><span class="dim-chips" id="dimChips" title="点击标签下钻切换趋势维度"></span><span class="chart-unit" id="trendUnit"></span></div>
+            <div class="chart-body" id="trendBox"></div>
+          </section>
+          <section class="chart-panel">
+            <div class="chart-head"><span class="chart-title"><svg class="ic ct-ic"><use href="#i-coin"/></svg>业务占比</span><span class="chart-unit">订单金额 · 含税</span></div>
+            <div class="chart-body donut-flex" id="bizBox"></div>
+          </section>
+          <section class="chart-panel">
+            <div class="chart-head"><span class="chart-title"><svg class="ic ct-ic"><use href="#i-truck"/></svg>运输方式占比</span><span class="chart-unit">订单数量 · 利润占比</span></div>
+            <div class="chart-body donut-flex" id="transBox"></div>
+          </section>
+          <section class="chart-panel">
+            <div class="chart-head"><span class="chart-title"><svg class="ic ct-ic"><use href="#i-calc"/></svg>项目利润对比</span><span class="chart-unit">利润(元)</span></div>
+            <div class="chart-body" id="profitBox"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="float-assistant" title="在线客服"><svg class="ic"><use href="#i-cust"/></svg></div>
+
+<script>
+/* ==================== 订单数据 ==================== */
+const ORDERS = [
+  {no:'D260924018071', st:'待发货', dst:'下发成功', cust:'一机集团', proj:'路通弹簧公司', dept:'路通弹簧公司', trans:'零担', load:'路通弹簧有限公司',   laddr:'乌素图街道装备园区',        lp:'张永健', ltel:'13347083800', recv:'中车株洲车辆有限公司', raddr:'宋家桥',           rp:'申朝阳'},
+  {no:'D260924018059', st:'待发货', dst:'下发成功', cust:'一机集团', proj:'桥箱公司',     dept:'桥箱公司',     trans:'零担', load:'桥箱公司',         laddr:'兵工东路11号',             lp:'王利辉', ltel:'13190751663', recv:'济南市槐荫区经十西路', raddr:'经十西路3100号',   rp:'李成玉'},
+  {no:'D260924018058', st:'待发货', dst:'下发成功', cust:'一机集团', proj:'路通弹簧公司', dept:'路通弹簧公司', trans:'零担', load:'路通弹簧有限公司', laddr:'乌素图街道装备园区',        lp:'张永健', ltel:'13347083800', recv:'保定市高碑店市',       raddr:'和平路世纪西路',   rp:'龚艳华'},
+  {no:'D260923017817', st:'已发货', dst:'下发成功', cust:'一机集团', proj:'路通弹簧公司', dept:'路通弹簧公司', trans:'包车', load:'路通弹簧有限公司', laddr:'乌素图街道装备园区',        lp:'张永健', ltel:'13347083800', recv:'中车西安车辆厂',       raddr:'三桥建章路',       rp:'焦旗'},
+  {no:'D260923017796', st:'待发货', dst:'下发成功', cust:'一机集团', proj:'三分公司',     dept:'三分公司',     trans:'干线', load:'三分厂',           laddr:'包头市一机集团（三分公司）', lp:'张宇飞', ltel:'13042642555', recv:'内蒙分院',             raddr:'内蒙分院',         rp:'石红卫'},
+  {no:'D260923017795', st:'待发货', dst:'下发成功', cust:'一机集团', proj:'三分公司',     dept:'三分公司',     trans:'干线', load:'三分厂发货',       laddr:'三分厂发货',               lp:'张宇飞', ltel:'13042642555', recv:'太原小店',             raddr:'-',                rp:'鲁鹤明'},
+  {no:'D260923017794', st:'待发货', dst:'下发成功', cust:'一机集团', proj:'三分公司',     dept:'三分公司',     trans:'干线', load:'三分厂',           laddr:'包头市一机集团（三分公司）', lp:'张宇飞', ltel:'13142642555', recv:'沈阳中科百科料有限公司', raddr:'中央路',          rp:'高胜闯'},
+  {no:'D260923017753', st:'待发货', dst:'下发成功', cust:'一机集团', proj:'三分公司',     dept:'三分公司',     trans:'零担', load:'三分厂',           laddr:'包头市一机集团（三分公司）', lp:'张宇飞', ltel:'13142642555', recv:'太原小店',             raddr:'-',                rp:'鲁鹤明'},
+  {no:'D260923017728', st:'已发货', dst:'下发成功', cust:'一机集团', proj:'三分公司',     dept:'三分公司',     trans:'包车', load:'内蒙古广正重净化', laddr:'内蒙古广正净化有限公司',     lp:'王军',   ltel:'18047207816', recv:'山西省太原市小店区',   raddr:'彩虹街山西天地煤机', rp:'鲁鹤明'},
+  {no:'D260923017717', st:'已发货', dst:'下发成功', cust:'一机集团', proj:'一分公司',     dept:'一分公司',     trans:'零担', load:'内蒙古一机集团',   laddr:'内蒙古一机集团第三分公司',   lp:'石慧敏', ltel:'15044726198', recv:'四川省眉山市东坡区',   raddr:'惠灵镇',           rp:'邹明涛'}
+];
+
+function opsHtml(o){
+  if(o.st === '已发货'){
+    return '<button class="op-btn op-view"><svg class="ic"><use href="#i-doc"/></svg>查看</button>';
+  }
+  return '<button class="op-btn op-edit"><svg class="ic"><use href="#i-edit"/></svg>编辑</button>' +
+         '<button class="op-btn op-del"><svg class="ic"><use href="#i-trash"/></svg>删除</button>';
+}
+function emptyRow(){
+  return `<tr><td colspan="17"><div class="empty">
+    <div class="empty-fig"><svg class="ic"><use href="#i-inbox"/></svg></div>
+    <p>未找到符合条件的订单，请调整筛选条件后重试</p>
+  </div></td></tr>`;
+}
+function renderRows(list){
+  document.getElementById('orderBody').innerHTML = list.length ? list.map((o,i) => `
+    <tr style="--r:${i}">
+      <td class="center"><input type="checkbox" class="chk row-chk"></td>
+      <td class="center num">${i+1}</td>
+      <td class="order-no">${o.no}</td>
+      <td class="center"><span class="badge ${o.st==='已发货'?'b-success':'b-warning'}">${o.st}</span></td>
+      <td class="center"><span class="badge b-success">${o.dst}</span></td>
+      <td class="center">${o.cust}</td>
+      <td class="center">${o.proj}</td>
+      <td class="center">${o.dept}</td>
+      <td class="center">${o.trans}</td>
+      <td>${o.load}</td>
+      <td>${o.laddr}</td>
+      <td class="center">${o.lp}</td>
+      <td class="center num">${o.ltel}</td>
+      <td>${o.recv}</td>
+      <td>${o.raddr}</td>
+      <td class="center">${o.rp}</td>
+      <td class="ops">${opsHtml(o)}</td>
+    </tr>`).join('') : emptyRow();
+  updateSelCount();
+}
+function updateSelCount(){
+  const n = document.querySelectorAll('.row-chk:checked').length;
+  document.getElementById('selCount').textContent = n;
+}
+renderRows(ORDERS);
+
+/* 复选框选择 */
+document.getElementById('chkAll').addEventListener('change', function(){
+  document.querySelectorAll('.row-chk').forEach(c => c.checked = this.checked);
+  updateSelCount();
+});
+document.getElementById('orderBody').addEventListener('change', e => {
+  if(e.target.classList.contains('row-chk')) updateSelCount();
+});
+
+/* 筛选 */
+function applyFilter(){
+  const v = id => document.getElementById(id).value.trim();
+  const kw = v('f-no'), cust = v('f-cust'), proj = v('f-proj'), st = v('f-st'),
+        dst = v('f-dst'), load = v('f-load'), trans = v('f-trans'), recv = v('f-recv');
+  const rows = ORDERS.filter(o =>
+    (!kw    || o.no.includes(kw)) &&
+    (!cust  || o.cust.includes(cust)) &&
+    (!proj  || o.proj.includes(proj)) &&
+    (!st    || o.st === st) &&
+    (!dst   || o.dst === dst) &&
+    (!load  || o.load.includes(load)) &&
+    (!trans || o.trans === trans) &&
+    (!recv  || o.recv.includes(recv))
+  );
+  renderRows(rows);
+  document.getElementById('chkAll').checked = false;
+  document.getElementById('totalCount').textContent = rows.length;
+}
+document.getElementById('btnSearch').addEventListener('click', applyFilter);
+document.getElementById('btnReset').addEventListener('click', () => {
+  ['f-no','f-cust','f-proj','f-st','f-dst','f-load','f-trans','f-recv'].forEach(id => document.getElementById(id).value = '');
+  applyFilter();
+});
+document.querySelectorAll('select.ipt').forEach(s => {
+  const sync = () => s.classList.toggle('invalid', !s.value);
+  s.addEventListener('change', sync); sync();
+});
+
+/* 分页（视觉交互） */
+document.querySelectorAll('.pg-num').forEach(n => n.addEventListener('click', () => {
+  document.querySelectorAll('.pg-num').forEach(x => x.classList.remove('on'));
+  n.classList.add('on');
+}));
+
+/* ==================== 菜单 / 页签导航 ==================== */
+/* 菜单点击：带子菜单的收起/展开，叶子节点切换页面 */
+document.querySelectorAll('.menu-link').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    if(a.dataset.page){ showPage(a.dataset.page); return; }
+    const li = a.closest('li');
+    if(li && li.querySelector(':scope > .sub')) li.classList.toggle('open');
+  });
+});
+
+function crumbHtml(arr){
+  return arr.map((t,i) => i === 0 ? `<span>${t}</span>`
+    : `<span class="sep">/</span><span class="${i === arr.length-1 ? 'cur' : ''}">${t}</span>`).join('');
+}
+
+function showPage(p){
+  const dash = p === 'dash';
+  document.getElementById('view-orders').style.display    = dash ? 'none' : '';
+  document.getElementById('view-dashboard').style.display = dash ? '' : 'none';
+  document.querySelectorAll('.menu-link').forEach(a => a.classList.toggle('active', a.dataset.page === p));
+  document.getElementById('m-out').classList.toggle('lit', dash);
+  document.getElementById('m-report').classList.toggle('lit', dash);
+  if(dash){
+    document.getElementById('li-out').classList.add('open');
+    document.getElementById('li-report').classList.add('open');
+    document.getElementById('crumb').innerHTML = crumbHtml(['首页','厂外运输管理','报表管理','实体运输业务看板']);
+    document.querySelectorAll('.tabsbar .tag').forEach(t => t.classList.remove('on'));
+    ensureDashTab().classList.add('on');
+  } else {
+    document.getElementById('crumb').innerHTML = crumbHtml(['首页','厂外运输管理','订单管理']);
+    document.querySelectorAll('.tabsbar .tag').forEach(t => t.classList.remove('on'));
+    document.getElementById('tag-orders').classList.add('on');
+  }
+  document.querySelector('.content').scrollTop = 0;
+}
+
+document.querySelectorAll('.menu-link[data-page]').forEach(a => {
+  a.addEventListener('click', e => { e.preventDefault(); showPage(a.dataset.page); });
+});
+
+function ensureDashTab(){
+  let t = document.getElementById('tag-dash');
+  if(!t){
+    t = document.createElement('div');
+    t.className = 'tag'; t.id = 'tag-dash';
+    t.innerHTML = '实体运输业务看板<i class="x">×</i>';
+    t.addEventListener('click', e => {
+      if(e.target.classList.contains('x')){ t.remove(); showPage('orders'); }
+      else showPage('dash');
+    });
+    document.getElementById('tabsbar').appendChild(t);
+  }
+  return t;
+}
+document.getElementById('tag-orders').addEventListener('click', e => {
+  if(!e.target.classList.contains('x')) showPage('orders');
+});
+
+/* ==================== 实体运输业务看板：报表渲染 ==================== */
+const PERIODS = {
+  day: {
+    name: '日报',
+    cols: [
+      {t:'序号', w:60, row:true},
+      {t:'项目名称', s:'描述', w:200},
+      {t:'合同编号', w:130},
+      {t:'订单下发时间', w:120, row:true},
+      {t:'今日订单量\n（单）', s:'各厂今日发货订单数', w:130},
+      {t:'今日发货量\n（吨）', s:'各厂今日发货量', w:130},
+      {t:'今日订单总金额\n（元）', s:'含税收入', w:140},
+      {t:'预估收入\n（元）', s:'= 今日订单总金额 / 1.09', w:150},
+      {t:'成本', s:'宝奇发票不含税金额', w:150},
+      {t:'利润', s:'已形成收入 - 成本', w:140},
+      {t:'利润率', s:'利润 / 已形成收入', w:130},
+      {t:'备注', w:150, row:true}
+    ]
+  },
+  week: {
+    name: '周报',
+    cols: [
+      {t:'序号', w:60, row:true},
+      {t:'项目名称', s:'描述', w:200},
+      {t:'合同编号', w:130},
+      {t:'订单下发时间', w:120, row:true},
+      {t:'本周订单量\n（单）', s:'各厂本周发货订数', w:130},
+      {t:'本周发货量\n（吨）', s:'各厂本周发货量', w:130},
+      {t:'本周订单总金额\n（元）', s:'含税收入', w:140},
+      {t:'预估收入\n（元）', s:'= 本周订单总金额 / 1.09', w:150},
+      {t:'成本', s:'宝奇发票不含税金额', w:150},
+      {t:'利润', s:'已形成收入 - 成本', w:140},
+      {t:'利润率', s:'利润 / 已形成收入', w:130},
+      {t:'备注', w:150, row:true}
+    ]
+  },
+  month: {
+    name: '月报',
+    cols: [
+      {t:'序号', w:60, row:true},
+      {t:'项目名称', s:'描述', w:180},
+      {t:'合同编号', w:130},
+      {t:'时间', w:100, row:true},
+      {t:'本月订单\n（单）', s:'各厂本月发货订数', w:130},
+      {t:'本月发货量\n（吨）', s:'各厂本月发货量', w:130},
+      {t:'预估收入\n（元）', s:'= 本月销售额 / 1.09', w:150},
+      {t:'本月开票金额', w:130, row:true},
+      {t:'本月已形成收入（元）', s:'= 已开票金额 / 1.09', w:160},
+      {t:'本月订单金额\n（元）', s:'含税收入', w:130},
+      {t:'降本比例', s:'同比原运价降幅比例', w:150},
+      {t:'降本增效金额', s:'实际降本的金额', w:130},
+      {t:'成本', s:'宝奇发票不含税金额', w:150},
+      {t:'利润', s:'已形成收入 - 成本', w:140},
+      {t:'利润率', s:'利润 / 已形成收入', w:130},
+      {t:'回款金额', w:120, row:true},
+      {t:'应收金额', w:120, row:true},
+      {t:'备注', w:150, row:true}
+    ]
+  },
+  year: {
+    name: '年报',
+    cols: [
+      {t:'序号', w:60, row:true},
+      {t:'项目名称', s:'描述', w:180},
+      {t:'合同编号', w:130},
+      {t:'时间', w:100, row:true},
+      {t:'本年订单\n（单）', s:'各厂本年发货订数', w:130},
+      {t:'本年发货量\n（吨）', s:'各厂本年发货量', w:130},
+      {t:'预估收入\n（元）', s:'= 本年销售额 / 1.09', w:150},
+      {t:'本年开票金额', w:130, row:true},
+      {t:'本年已形成收入（元）', s:'= 已开票金额 / 1.09', w:160},
+      {t:'本年订单金额\n（元）', s:'含税收入', w:130},
+      {t:'降本比例', s:'同比原运价降幅比例', w:150},
+      {t:'降本增效金额', s:'实际降本的金额', w:130},
+      {t:'成本', s:'宝奇发票不含税金额', w:150},
+      {t:'利润', s:'已形成收入 - 成本', w:140},
+      {t:'利润率', s:'利润 / 已形成收入', w:130},
+      {t:'回款金额', w:120, row:true},
+      {t:'应收金额', w:120, row:true},
+      {t:'备注', w:150, row:true}
+    ]
+  }
+};
+
+/* ==================== 看板示例数据（数值按表头公式实时计算，保证勾稽一致） ==================== */
+/* day/week 行字段：proj 项目, time 下发时间, orders 订单量, tons 发货量, amt 订单总金额(含税), cost 成本, note 备注
+   month/year 行字段：proj, time, orders, tons, sales 订单金额(含税), invoiced 开票金额(含税),
+                      cost 成本, cut 降本比例(%), cutAmt 降本增效金额, paid 回款金额, note 备注 */
+const DASH_DATA = {
+  day: [
+    {proj:'路通弹簧公司', time:'2026-09-24 08:32', orders:6, tons:58.4,  amt:46320,  cost:38760,  note:'发往株洲中车'},
+    {proj:'桥箱公司',     time:'2026-09-24 09:05', orders:4, tons:36.2,  amt:29850,  cost:25120,  note:'正常发运'},
+    {proj:'三分公司',     time:'2026-09-23 16:41', orders:5, tons:61.8,  amt:48600,  cost:40930,  note:'含1单包车'},
+    {proj:'一分公司',     time:'2026-09-24 10:12', orders:3, tons:22.6,  amt:19240,  cost:15870,  note:'新增济南线路'}
+  ],
+  week: [
+    {proj:'路通弹簧公司', time:'09-21 ~ 09-27', orders:31, tons:342.6, amt:276480, cost:231050, note:'周四集中发货'},
+    {proj:'桥箱公司',     time:'09-21 ~ 09-27', orders:22, tons:198.4, amt:164260, cost:138920, note:'含2单加急'},
+    {proj:'三分公司',     time:'09-21 ~ 09-27', orders:28, tons:405.2, amt:322540, cost:269870, note:'含3单包车'},
+    {proj:'一分公司',     time:'09-21 ~ 09-27', orders:17, tons:126.8, amt:101930, cost:85360,  note:'发运正常'}
+  ],
+  month: [
+    {proj:'路通弹簧公司', time:'2026-09', orders:52,  tons:1286.5, sales:1032600, invoiced:896400,  cost:753180, cut:6.8, cutAmt:58900, paid:780000, note:'全部按期交付'},
+    {proj:'桥箱公司',     time:'2026-09', orders:38,  tons:762.3,  sales:612380,  invoiced:531260,  cost:447050, cut:5.9, cutAmt:31240, paid:460000, note:'含2单加急运输'},
+    {proj:'三分公司',     time:'2026-09', orders:61,  tons:1586.8, sales:1268400, invoiced:1105200, cost:928640, cut:7.4, cutAmt:87350, paid:950000, note:'含9单包车，周末加发'},
+    {proj:'一分公司',     time:'2026-09', orders:29,  tons:486.2,  sales:392560,  invoiced:338900,  cost:284760, cut:6.2, cutAmt:22680, paid:300000, note:'新增太原线路'}
+  ],
+  year: [
+    {proj:'路通弹簧公司', time:'2026', orders:412, tons:9862.4,  sales:8126400, invoiced:7436200, cost:6218400, cut:7.1, cutAmt:512600, paid:6820000, note:'全年按期交付'},
+    {proj:'桥箱公司',     time:'2026', orders:296, tons:5934.8,  sales:4853200, invoiced:4418600, cost:3692800, cut:6.3, cutAmt:268400, paid:4100000, note:'二季度雨季延发3单'},
+    {proj:'三分公司',     time:'2026', orders:487, tons:12680.6, sales:10123800,invoiced:9268400, cost:7769200, cut:7.8, cutAmt:738900, paid:8500000, note:'含37单包车，冬季加发'},
+    {proj:'一分公司',     time:'2026', orders:231, tons:3726.5,  sales:2986400, invoiced:2723800, cost:2284600, cut:5.6, cutAmt:153200, paid:2500000, note:'新增3条固定线路'}
+  ]
+};
+
+/* 合同编号：合同不随周期变，按项目固定。改合同号只需改这里；
+   若以后接口从库里带回 r.contract（dim_project 加合同号列），会优先用真实数据 */
+const CONTRACTS = {
+  '路通弹簧公司': 'HT-LT-2026-018',
+  '桥箱公司':     'HT-QX-2026-007',
+  '三分公司':     'HT-SF-2026-032',
+  '一分公司':     'HT-YF-2026-011'
+};
+const contractOf = r => r.contract || CONTRACTS[r.proj] || '—';
+
+/* ==================== 从后端接口取真实数据 ==================== */
+/* server.py 提供 /api/dash 接口。LIVE[p] 三种状态:
+   undefined = 接口未通或加载中(看板自动退回演示数据 DASH_DATA)
+   []        = 接口通了但库里没有该期数据(表格显示空状态)
+   [rows]    = 库里的真实数据 */
+const LIVE = {day:undefined, week:undefined, month:undefined, year:undefined};
+async function loadLive(p){
+  try{
+    const res = await fetch('/api/dash?period=' + p + '&key=' + encodeURIComponent(currentVal(p)));
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if(data && data.error) throw new Error(data.error);
+    LIVE[p] = data.rows || [];
+    /* 本期没数据时后端会返回库里最近一期,把查询框同步过去,表头时间才对得上 */
+    if(data.key && LIVE[p].length && dashVal === currentVal(p) && data.key !== currentVal(p)){
+      dashVal = data.key;
+      const inp = document.querySelector('#dqHolder .dq-input');
+      if(inp) inp.value = dashVal;
+    }
+  }catch(e){
+    LIVE[p] = undefined;   /* 接口不通:回退演示数据 */
+    return;
+  }
+  if(dashP === p) renderReport(p);   /* 数据到位后刷新当前视图 */
+}
+
+const fmtInt   = n => n.toLocaleString('zh-CN');
+const fmtMoney = n => n.toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2});
+const fmtTon   = n => n.toLocaleString('zh-CN', {minimumFractionDigits:1, maximumFractionDigits:1});
+const fmtPct   = n => (n * 100).toFixed(2) + '%';
+
+/* ==================== 查询往期 ==================== */
+const pad2 = n => String(n).padStart(2, '0');
+const dateStr = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+
+/* 当前周期对应的控件值：日报=今天 / 周报=本周 / 月报=本月 / 年报=今年（可传入任意日期换算） */
+function currentVal(p, d = new Date()){
+  if(p === 'day')   return dateStr(d);
+  if(p === 'week'){
+    const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dayNum = (t.getUTCDay() + 6) % 7;
+    t.setUTCDate(t.getUTCDate() - dayNum + 3);
+    const firstThu = new Date(Date.UTC(t.getUTCFullYear(), 0, 4));
+    const fday = (firstThu.getUTCDay() + 6) % 7;
+    firstThu.setUTCDate(firstThu.getUTCDate() - fday + 3);
+    const w = 1 + Math.round((t - firstThu) / (7 * 864e5));
+    return `${t.getUTCFullYear()}-W${pad2(w)}`;
+  }
+  if(p === 'month') return `${d.getFullYear()}-${pad2(d.getMonth()+1)}`;
+  return String(d.getFullYear());
+}
+
+/* 上一期取值：用于 KPI 环比（与"查询往期"走同一套确定性数据，口径一致） */
+function prevVal(p){
+  const n = new Date();
+  if(p === 'day')   return dateStr(new Date(n.getFullYear(), n.getMonth(), n.getDate() - 1));
+  if(p === 'week')  return currentVal('week', new Date(n.getFullYear(), n.getMonth(), n.getDate() - 7));
+  if(p === 'month') return n.getMonth() === 0 ? `${n.getFullYear()-1}-12` : `${n.getFullYear()}-${pad2(n.getMonth())}`;
+  return String(n.getFullYear() - 1);
+}
+
+/* 周期区间文案（含往期） */
+function periodRange(p, val){
+  val = val || currentVal(p);
+  const cur = currentVal(p);
+  if(p === 'day'){
+    if(val === cur) return `${val}（今日）`;
+    const d = new Date(val + 'T00:00:00');
+    const wd = '日一二三四五六'[d.getDay()];
+    return `${val}（周${wd}）`;
+  }
+  if(p === 'week'){
+    const m = /^(\d{4})-W(\d{1,2})$/.exec(val);
+    if(!m) return val;
+    const jan4 = new Date(Date.UTC(+m[1], 0, 4));
+    const off = (jan4.getUTCDay() + 6) % 7;
+    const mon = new Date(jan4); mon.setUTCDate(jan4.getUTCDate() - off + (+m[2] - 1) * 7);
+    const sun = new Date(mon);  sun.setUTCDate(mon.getUTCDate() + 6);
+    const f = x => `${x.getUTCFullYear()}-${pad2(x.getUTCMonth()+1)}-${pad2(x.getUTCDate())}`;
+    return `${f(mon)} ~ ${f(sun)}${val === cur ? '（本周）' : ''}`;
+  }
+  if(p === 'month') return `${val}${val === cur ? '（本月）' : ''}`;
+  return `${val}年${val === cur ? '（本年）' : ''}`;
+}
+
+/* 往期数据：按周期键做确定性缩放（0.72~1.24），本期返回基础数据 */
+function hashStr(s){
+  let h = 0;
+  for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+/* ISO 周号 → 周一起止日期（YYYY-MM-DD ~ YYYY-MM-DD） */
+function weekDays(val){
+  const m = /^(\d{4})-W(\d{1,2})$/.exec(val);
+  if(!m) return null;
+  const jan4 = new Date(Date.UTC(+m[1], 0, 4));
+  const off = (jan4.getUTCDay() + 6) % 7;
+  const mon = new Date(jan4); mon.setUTCDate(jan4.getUTCDate() - off + (+m[2] - 1) * 7);
+  const sun = new Date(mon);  sun.setUTCDate(mon.getUTCDate() + 6);
+  const f = x => `${x.getUTCFullYear()}-${pad2(x.getUTCMonth()+1)}-${pad2(x.getUTCDate())}`;
+  return `${f(mon)} ~ ${f(sun)}`;
+}
+function getRows(p, val){
+  /* 本期优先用后端拉回的真实数据(LIVE),接口未通或加载中时退回演示数据 */
+  if(!val || val === currentVal(p)){
+    const live = LIVE[p];
+    if(Array.isArray(live)) return live;
+    return DASH_DATA[p];
+  }
+  const base = DASH_DATA[p];
+  const f = 0.72 + (hashStr(p + '|' + val) % 53) / 100;
+  const isLong = (p === 'month' || p === 'year');
+  const r10 = v => Math.round(v * f / 10) * 10;
+  return base.map(r => {
+    const o = Object.assign({}, r);
+    o.orders = Math.max(1, Math.round(r.orders * f));
+    o.tons   = Math.round(r.tons * f * 10) / 10;
+    o.cost   = r10(r.cost);
+    if(p === 'day' && /^\d{4}-\d{2}-\d{2}/.test(val)) o.time = val + o.time.slice(10);
+    else if(p === 'week' && weekDays(val)) o.time = weekDays(val).replace(/\d{4}-/g, '');
+    else if(p === 'month' || p === 'year') o.time = val;
+    if(isLong){
+      o.sales = r10(r.sales); o.invoiced = r10(r.invoiced);
+      o.paid = r10(r.paid);   o.cutAmt  = r10(r.cutAmt || 0);
+      o.cut = Math.round((r.cut + (f - 1) * 3) * 10) / 10;
+    } else {
+      o.amt = r10(r.amt);
+    }
+    return o;
+  });
+}
+
+/* 查询控件：随周期类型切换 日期/周/月/年 */
+let dashP = 'day', dashVal = null, dashProj = '';
+
+/* 项目视角:'' = 全部(总表);选中某厂 = KPI/表格/趋势按该厂过滤,占比图置灰其他厂 */
+const PROJ_SHORT = { '路通弹簧公司':'路通弹簧', '桥箱公司':'桥箱', '三分公司':'三分', '一分公司':'一分' };
+function getViewRows(p, val){
+  const rows = getRows(p, val);
+  return dashProj ? rows.filter(r => r.proj === dashProj) : rows;
+}
+function setDashProj(proj){
+  dashProj = proj;
+  document.querySelectorAll('#projMenu .proj-item').forEach(b => b.classList.toggle('is-active', b.dataset.proj === proj));
+  document.getElementById('projBtnLabel').textContent = '项目视角:' + (proj ? (PROJ_SHORT[proj] || proj) : '全部');
+  document.getElementById('projBtn').classList.toggle('has-sel', !!proj);
+  renderReport(dashP);
+}
+const projDropEl = document.getElementById('projDrop');
+document.getElementById('projBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  projDropEl.classList.toggle('open');
+});
+document.querySelectorAll('#projMenu .proj-item').forEach(b => b.addEventListener('click', () => {
+  setDashProj(b.dataset.proj);
+  projDropEl.classList.remove('open');
+}));
+document.addEventListener('click', e => { if(!e.target.closest('.proj-drop')) projDropEl.classList.remove('open'); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape') projDropEl.classList.remove('open'); });
+
+function buildQueryInput(p){
+  const holder = document.getElementById('dqHolder');
+  const cur = currentVal(p);
+  let el;
+  if(p === 'year'){
+    el = document.createElement('select');
+    el.className = 'dq-input';
+    const y0 = new Date().getFullYear();
+    for(let y = y0; y >= y0 - 3; y--){
+      const o = document.createElement('option');
+      o.value = String(y); o.textContent = y + '年';
+      el.appendChild(o);
+    }
+  } else {
+    el = document.createElement('input');
+    el.className = 'dq-input';
+    el.type = {day:'date', week:'week', month:'month'}[p];
+  }
+  el.value = cur;
+  el.addEventListener('change', () => { dashVal = el.value; renderReport(dashP); if(dashVal === currentVal(dashP)) loadLive(dashP); });
+  holder.innerHTML = '';
+  holder.appendChild(el);
+  dashVal = cur;
+}
+
+document.getElementById('dqBack').addEventListener('click', () => {
+  dashVal = currentVal(dashP);
+  document.getElementById('dqHolder').firstChild.value = dashVal;
+  renderReport(dashP);
+  loadLive(dashP);
+});
+
+/* KPI 数字滚动(尊重系统"减少动态效果"设置) */
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)');
+function countUp(el, fmt, target, dur = 650){
+  if(REDUCED.matches){ el.textContent = fmt(target); return; }
+  const t0 = performance.now();
+  const step = now => {
+    const k = Math.min(1, (now - t0) / dur);
+    const e = 1 - Math.pow(1 - k, 3);          /* easeOutCubic */
+    el.textContent = fmt(target * e);
+    if(k < 1) requestAnimationFrame(step); else el.textContent = fmt(target);
+  };
+  requestAnimationFrame(step);
+}
+
+/* KPI 汇总卡片：随周期切换重新汇总，并与上一期对比生成环比 */
+function kpiSums(p, val){
+  const rows = getViewRows(p, val);
+  const isLong = (p === 'month' || p === 'year');
+  const s = {orders:0, tons:0, amt:0, cost:0, sales:0, invoiced:0};
+  rows.forEach(r => {
+    s.orders += r.orders; s.tons += r.tons; s.cost += r.cost;
+    if(isLong){ s.sales += r.sales; s.invoiced += r.invoiced; } else { s.amt += r.amt; }
+  });
+  const amount = isLong ? s.sales : s.amt;
+  const income = (isLong ? s.invoiced : s.amt) / 1.09;
+  return { orders:s.orders, tons:s.tons, amount, income, profit: income - s.cost };
+}
+function deltaChip(cur, prev){
+  if(!prev) return '';
+  const d = (cur - prev) / Math.abs(prev);
+  if(Math.abs(d) < .0005) return '';
+  const up = d > 0;
+  return `<span class="delta ${up ? 'up' : 'down'}" title="较上期">${(Math.abs(d) * 100).toFixed(1)}%<svg class="ic"><use href="#${up ? 'i-arrup' : 'i-arrdwn'}"/></svg></span>`;
+}
+function renderKpis(p, val){
+  const s = kpiSums(p, val);
+  const q = kpiSums(p, prevVal(p));
+  const rate   = s.income ? s.profit / s.income : 0;
+  const pfx    = {day:'今日', week:'本周', month:'本月', year:'本年'}[p];
+  const plabel = dashProj ? (PROJ_SHORT[dashProj] || dashProj) + ' · ' : '';
+  const who    = dashProj ? '该厂' : '各厂';
+  const cards = [
+    {icon:'i-order', cls:'k-blue',   label:`${plabel}${pfx}订单量（单）`,   raw:s.orders,  fmt:fmtInt,   sub:`${pfx}${who}发货订单数${dashProj ? '' : '合计'}`, delta:deltaChip(s.orders, q.orders)},
+    {icon:'i-truck', cls:'k-cyan',   label:`${plabel}${pfx}发货量（吨）`,   raw:s.tons,    fmt:fmtTon,   sub:`${pfx}${who}发货量${dashProj ? '' : '合计'}`,   delta:deltaChip(s.tons, q.tons)},
+    {icon:'i-coin',  cls:'k-orange', label:`${plabel}${pfx}订单金额（元）`, raw:s.amount,  fmt:fmtMoney, sub:'含税金额',              delta:deltaChip(s.amount, q.amount)},
+    {icon:'i-wallet',cls:'k-purple', label:`${plabel}` + ((p === 'month' || p === 'year') ? `${pfx}已形成收入（元）` : `${pfx}预估收入（元）`),
+                                     raw:s.income, fmt:fmtMoney, sub:(p === 'month' || p === 'year') ? '= 已开票金额 / 1.09' : '= 订单总金额 / 1.09',
+                                     delta:deltaChip(s.income, q.income)},
+    {icon:'i-trend', cls:'k-green',  label:`${plabel}${pfx}利润（元）`,     raw:s.profit,  fmt:fmtMoney, sub:`收入 − 成本 · 利润率 ${fmtPct(rate)}`, green:true, delta:deltaChip(s.profit, q.profit)}
+  ];
+  document.getElementById('kpiRow').innerHTML = cards.map(c => `
+    <div class="kpi-card">
+      <span class="kpi-ic ${c.cls}"><svg class="ic"><use href="#${c.icon}"/></svg></span>
+      <div class="kpi-txt">
+        <div class="kpi-label">${c.label}</div>
+        <div class="kpi-value${c.green ? ' green' : ''}"><span class="kpi-num"></span>${c.delta}</div>
+        <div class="kpi-sub">${c.sub}</div>
+      </div>
+    </div>`).join('');
+  document.querySelectorAll('#kpiRow .kpi-num').forEach((el, i) => countUp(el, cards[i].fmt, cards[i].raw));
+}
+
+function renderReport(p){
+  const cfg = PERIODS[p];
+  let r1 = '', colgroup = '';
+  cfg.cols.forEach(c => {
+    colgroup += `<col style="width:${c.w}px">`;
+    const title = c.t.replace('\n', '<br>');
+    /* 有解释的列:解释存在 th 的 data-tip 上,悬停单元格即出浮窗 */
+    r1 += `<th${c.s ? ` data-tip="${c.s}"` : ''}>${title}</th>`;
+  });
+  const total = cfg.cols.reduce((a,c) => a + c.w, 0);
+  const tbl = document.getElementById('reportTable');
+  tbl.style.minWidth = total + 'px';
+  tbl.style.width = '100%';
+  /* 数据行：衍生字段按表头公式实时计算 */
+  const rows = getViewRows(p, dashVal);
+  const isLong = (p === 'month' || p === 'year');
+  let body = '';
+  const sums = {orders:0, tons:0, amt:0, cost:0, sales:0, invoiced:0, paid:0, cutAmt:0};
+  if(!rows.length){
+    body = `<tr><td class="no-data" colspan="${cfg.cols.length}">该周期暂无数据（库里还没有 ${cfg.name} · ${dashVal || ''} 的记录）</td></tr>`;
+  }
+  rows.forEach((r, i) => {   /* rows 为空数组时 forEach 自然跳过 */
+    sums.orders += r.orders; sums.tons += r.tons; sums.cost += r.cost; sums.cutAmt += r.cutAmt || 0;
+    if(isLong){ sums.sales += r.sales; sums.invoiced += r.invoiced; sums.paid += r.paid; }
+    else { sums.amt += r.amt; }
+    const cells = isLong ? [
+      '', i+1, r.proj, r.time, fmtInt(r.orders), fmtTon(r.tons),
+      fmtMoney(r.sales / 1.09),            /* 预估收入 = 销售额/1.09 */
+      fmtMoney(r.invoiced),                /* 开票金额（含税） */
+      fmtMoney(r.invoiced / 1.09),         /* 已形成收入 = 开票/1.09 */
+      fmtMoney(r.sales),                   /* 订单金额（含税） */
+      r.cut.toFixed(1) + '%', fmtMoney(r.cutAmt), fmtMoney(r.cost),
+      fmtMoney(r.invoiced / 1.09 - r.cost),          /* 利润 */
+      fmtPct((r.invoiced / 1.09 - r.cost) / (r.invoiced / 1.09 || 1)),  /* 利润率 */
+      fmtMoney(r.paid), fmtMoney(r.invoiced - r.paid)
+    ] : [
+      '', i+1, r.proj, r.time, fmtInt(r.orders), fmtTon(r.tons),
+      fmtMoney(r.amt), fmtMoney(r.amt / 1.09), fmtMoney(r.cost),
+      fmtMoney(r.amt / 1.09 - r.cost),
+      fmtPct((r.amt / 1.09 - r.cost) / (r.amt / 1.09 || 1))
+    ];
+    cells.shift();
+    const projCell = dashProj ? `<td>${r.proj}</td>` : `<td><span class="proj-link" title="点击聚焦该厂">${r.proj}</span></td>`;
+    body += `<tr style="--r:${i}"><td class="center num">${i+1}</td>${projCell}<td class="center">${contractOf(r)}</td><td class="center num">${r.time}</td>` +
+      cells.slice(3).map((c, k) => `<td class="right">${c}</td>`).join('') +
+      `<td class="center">${r.note || '—'}</td></tr>`;
+  });
+  /* 合计行 */
+  if(rows.length && isLong){
+    const formed = sums.invoiced / 1.09;
+    body += `<tr class="total-row"><td class="center"></td><td>合计</td><td class="center"></td><td class="center"></td>` +
+      `<td class="right">${fmtInt(sums.orders)}</td><td class="right">${fmtTon(sums.tons)}</td>` +
+      `<td class="right">${fmtMoney(sums.sales / 1.09)}</td><td class="right">${fmtMoney(sums.invoiced)}</td>` +
+      `<td class="right">${fmtMoney(formed)}</td><td class="right">${fmtMoney(sums.sales)}</td>` +
+      `<td class="right">—</td><td class="right">${fmtMoney(sums.cutAmt)}</td><td class="right">${fmtMoney(sums.cost)}</td>` +
+      `<td class="right">${fmtMoney(formed - sums.cost)}</td><td class="right">${fmtPct((formed - sums.cost) / (formed || 1))}</td>` +
+      `<td class="right">${fmtMoney(sums.paid)}</td><td class="right">${fmtMoney(sums.invoiced - sums.paid)}</td><td></td></tr>`;
+  } else if(rows.length){
+    const est = sums.amt / 1.09;
+    body += `<tr class="total-row"><td class="center"></td><td>合计</td><td class="center"></td><td class="center"></td>` +
+      `<td class="right">${fmtInt(sums.orders)}</td><td class="right">${fmtTon(sums.tons)}</td>` +
+      `<td class="right">${fmtMoney(sums.amt)}</td><td class="right">${fmtMoney(est)}</td>` +
+      `<td class="right">${fmtMoney(sums.cost)}</td><td class="right">${fmtMoney(est - sums.cost)}</td>` +
+      `<td class="right">${fmtPct((est - sums.cost) / (est || 1))}</td><td></td></tr>`;
+  }
+  document.getElementById('reportTable').innerHTML =
+    `<colgroup>${colgroup}</colgroup>` +
+    `<thead><tr>${r1}</tr></thead>` +
+    `<tbody>${body}</tbody>`;
+  document.getElementById('dashPeriod').textContent = cfg.name;
+  document.getElementById('dashRange').textContent = periodRange(p, dashVal);
+  document.getElementById('dqBack').classList.toggle('is-current', dashVal === currentVal(p));
+  renderKpis(p, dashVal);
+  if(dashMode === 'chart') renderCharts(true);
+}
+
+/* 表头单元格悬停显示字段解释(事件委托:表头每次重渲染后依然有效) */
+const rptEl = document.getElementById('reportTable');
+rptEl.addEventListener('pointerover', e => { const h = e.target.closest('th[data-tip]'); if(h) showTip(h.dataset.tip, e); });
+rptEl.addEventListener('pointermove',  e => { const h = e.target.closest('th[data-tip]'); if(h) showTip(h.dataset.tip, e); });
+rptEl.addEventListener('pointerout',   e => { if(e.target.closest('th[data-tip]')) hideTip(); });
+/* 项目名下钻:点击行内项目名 → 切换到该厂视角 */
+rptEl.addEventListener('click', e => { const t = e.target.closest('.proj-link'); if(t) setDashProj(t.textContent.trim()); });
+
+/* ==================== 图表视图(纯 SVG 手绘,无外部依赖) ==================== */
+const PAL = ['#409eff','#18b2a3','#f29b2e','#7d5be0','#3faf55'];
+const P_COLOR = { '路通弹簧公司':'#409eff', '桥箱公司':'#18b2a3', '三分公司':'#f29b2e', '一分公司':'#7d5be0' };
+let dashMode = 'table', chartTip = null;
+
+function tipEl(){
+  if(!chartTip){ chartTip = document.createElement('div'); chartTip.className = 'chart-tip'; document.body.appendChild(chartTip); }
+  return chartTip;
+}
+function showTip(html, e){
+  const t = tipEl(); t.innerHTML = html; t.style.opacity = 1;
+  const w = t.offsetWidth, h = t.offsetHeight;
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if(x + w > innerWidth - 8)  x = e.clientX - w - 14;
+  if(y + h > innerHeight - 8) y = e.clientY - h - 14;
+  t.style.left = x + 'px'; t.style.top = y + 'px';
+}
+function hideTip(){ if(chartTip) chartTip.style.opacity = 0; }
+
+const r1 = v => Math.round(v * 10) / 10;
+const fmtShort = v => v >= 1e8 ? (v/1e8).toFixed(2) + '亿'
+                  : v >= 1e4 ? (v/1e4).toFixed(1) + '万'
+                  : v >= 1000 ? Math.round(v).toLocaleString('zh-CN')
+                  : String(r1(v));
+function niceMax(v){
+  if(v <= 0) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(v))), d = v / p;
+  return (d <= 1 ? 1 : d <= 2 ? 2 : d <= 2.5 ? 2.5 : d <= 5 ? 5 : 10) * p;
+}
+function shiftDay(ds, k){ const d = new Date(ds + 'T00:00:00'); d.setDate(d.getDate() + k); return dateStr(d); }
+function shiftMonth(ym, k){
+  let [y, m] = ym.split('-').map(Number);
+  const t = y * 12 + (m - 1) + k;
+  y = Math.floor(t / 12); m = t % 12 + 1;
+  return `${y}-${pad2(m)}`;
+}
+
+/* ==================== 趋势下钻:一个趋势框点击切换多个维度 ==================== */
+/* soft=胶囊选中底色;tip(v,isLong)生成悬浮文案;axis生成Y轴刻度文案;颜色随维度走 */
+const TREND_DIMS = [
+  {k:'tons',   name:'运量',     unit:'吨', color:'#409eff', soft:'#ecf5ff', tip:v=>`发货量 <b>${fmtTon(v)}</b> 吨`, axis:fmtShort},
+  {k:'orders', name:'订单量',   unit:'单', color:'#18b2a3', soft:'#e8f8f6', tip:v=>`订单量 <b>${fmtInt(Math.round(v))}</b> 单`, axis:fmtShort},
+  {k:'amount', name:'订单金额', unit:'元', color:'#f29b2e', soft:'#fdf3e7', tip:v=>`订单金额 <b>¥${fmtMoney(v)}</b>`, axis:fmtShort},
+  {k:'income', name:'收入',     unit:'元', color:'#7d5be0', soft:'#f1ecfc', tip:(v,isLong)=>`${isLong?'已形成收入':'预估收入'} <b>¥${fmtMoney(v)}</b>`, axis:fmtShort},
+  {k:'cost',   name:'成本',     unit:'元', color:'#f56c6c', soft:'#fef0f0', tip:v=>`成本 <b>¥${fmtMoney(v)}</b>`, axis:fmtShort},
+  {k:'profit', name:'利润',     unit:'元', color:'#3faf55', soft:'#edf7ee', tip:v=>`利润 <b>¥${fmtMoney(v)}</b>`, axis:fmtShort},
+  {k:'rate',   name:'利润率',   unit:'%', color:'#e6a23c', soft:'#fdf6ec', tip:v=>`利润率 <b>${fmtPct(v)}</b>`, axis:v=>(v*100).toFixed(1).replace(/\.0$/,'')+'%'}
+];
+let trendDim = 'tons';
+function buildDimChips(){
+  const wrap = document.getElementById('dimChips');
+  if(!wrap) return;
+  wrap.innerHTML = TREND_DIMS.map(d =>
+    `<button type="button" class="dim-chip${d.k === trendDim ? ' on' : ''}" data-dim="${d.k}" style="--dc:${d.color};--dcs:${d.soft}"><i class="d-dot"></i>${d.name}</button>`).join('');
+  wrap.querySelectorAll('.dim-chip').forEach(ch => ch.addEventListener('click', () => {
+    if(ch.dataset.dim === trendDim) return;
+    trendDim = ch.dataset.dim;
+    wrap.querySelectorAll('.dim-chip').forEach(x => x.classList.toggle('on', x.dataset.dim === trendDim));
+    renderTrend(true);
+  }));
+}
+
+/* 按维度从一组行里取汇总值(与 KPI 卡/报表合计同一套公式,保证勾稽一致) */
+function dimPick(rows, dim, isLong){
+  const S = k => rows.reduce((a,r) => a + (r[k] || 0), 0);
+  const income = (isLong ? S('invoiced') : S('amt')) / 1.09;
+  const cost = S('cost');
+  switch(dim){
+    case 'tons':   return S('tons');
+    case 'orders': return S('orders');
+    case 'amount': return isLong ? S('sales') : S('amt');
+    case 'income': return income;
+    case 'cost':   return cost;
+    case 'profit': return income - cost;
+    default:       return income ? (income - cost) / income : 0;   /* rate 利润率 */
+  }
+}
+
+/* 趋势序列:选中期为最后一个点(真实值),向前生成确定性历史
+   收入/单量侧用 fA、成本侧另叠一层 fB,利润与利润率曲线才不会和收入完全同形 */
+function trendSeries(p, val, dim){
+  const n = {day:7, week:8, month:12, year:5}[p];
+  const isLong = p === 'month' || p === 'year';
+  const v = val || currentVal(p);
+  const labels = [], keys = [];
+  if(p === 'day'){
+    for(let k = n-1; k >= 0; k--){ const d = shiftDay(v, -k); keys.push('day|'+d); labels.push(d.slice(5)); }
+  } else if(p === 'week'){
+    const mon = weekDays(v).split(' ~ ')[0];
+    for(let k = n-1; k >= 0; k--){
+      const wk = currentVal('week', new Date(shiftDay(mon, -7 * k) + 'T00:00:00'));
+      keys.push('week|'+wk); labels.push('W' + wk.split('-W')[1]);
+    }
+  } else if(p === 'month'){
+    for(let k = n-1; k >= 0; k--){ const ym = shiftMonth(v, -k); keys.push('month|'+ym); labels.push(ym.slice(5) + '月'); }
+  } else {
+    const y0 = +v;
+    for(let k = n-1; k >= 0; k--){ keys.push('year|' + (y0-k)); labels.push(String(y0-k)); }
+  }
+  const salt = dashProj || 'ALL';   /* 波动按项目异化 */
+  const baseRows = dashProj ? DASH_DATA[p].filter(r => r.proj === dashProj) : DASH_DATA[p];
+  const c = {tons:0, orders:0, amt:0, sales:0, invoiced:0, cost:0};
+  baseRows.forEach(r => { c.tons += r.tons; c.orders += r.orders; c.amt += r.amt || 0;
+                          c.sales += r.sales || 0; c.invoiced += r.invoiced || 0; c.cost += r.cost; });
+  const rows = getViewRows(p, val);
+  return keys.map((key, i) => {
+    if(i === n-1 && rows.length) return { label: labels[i], value: dimPick(rows, dim, isLong) };
+    const drift = 0.90 + (i/(n-1)) * 0.18;                               /* 轻微上行趋势 */
+    const fA = 0.78 + (hashStr(key + '|A|' + salt) % 42) / 100;          /* 收入/单量侧波动 */
+    const fB = fA * (0.96 + (hashStr(key + '|B|' + salt) % 9) / 100);    /* 成本侧小幅波动(±4%,避免吃穿薄利变负) */
+    const amt = isLong ? c.sales : c.amt;
+    return { label: labels[i], value: dimPick(
+      [{tons: c.tons*fA*drift, orders: Math.round(c.orders*fA*drift), amt: amt*fA*drift,
+        sales: amt*fA*drift, invoiced: c.invoiced*fA*drift, cost: c.cost*fB*drift}], dim, isLong) };
+  });
+}
+
+function renderTrend(animate){
+  const box = document.getElementById('trendBox');
+  const dim = TREND_DIMS.find(d => d.k === trendDim) || TREND_DIMS[0];
+  document.getElementById('trendTitle').textContent = dim.name + '趋势';
+  const tIc = document.getElementById('trendIc');
+  if(tIc) tIc.style.color = dim.color;
+  document.getElementById('trendUnit').textContent =
+    (dashProj ? (PROJ_SHORT[dashProj] || dashProj) + ' · ' : '') +
+    '单位:' + dim.unit + ' · ' + ({day:'近7天', week:'近8周', month:'近12个月', year:'近5年'})[dashP];
+  const W = Math.max(560, box.clientWidth), H = Math.max(220, box.clientHeight || 250);
+  const pad = {l:48, r:18, t:16, b:28};
+  const s = trendSeries(dashP, dashVal, trendDim);
+  const vmax = niceMax(Math.max(...s.map(d => d.value)));
+  const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
+  const X = i => pad.l + i * iw / (s.length - 1);
+  const Y = v => pad.t + ih - v / vmax * ih;
+  let grid = '';
+  for(let k = 0; k <= 4; k++){
+    const gy = pad.t + ih - ih * k / 4;
+    grid += `<line x1="${pad.l}" y1="${gy}" x2="${W-pad.r}" y2="${gy}" stroke="${k === 0 ? '#dfe5ee' : '#eef1f6'}"/>` +
+            `<text x="${pad.l-8}" y="${gy+3.5}" text-anchor="end" font-size="10.5" fill="#909399">${dim.axis(vmax*k/4)}</text>`;
+  }
+  const skip = s.length > 9 && iw / s.length < 62 ? 2 : 1;
+  let xlab = '';
+  s.forEach((d, i) => {
+    if(i % skip === 0 || i === s.length - 1)
+      xlab += `<text x="${X(i)}" y="${H-8}" text-anchor="middle" font-size="10.5" fill="#909399">${d.label}</text>`;
+  });
+  let d = `M${X(0)},${Y(s[0].value)}`;
+  for(let i = 1; i < s.length; i++){
+    const mx = (X(i-1) + X(i)) / 2;
+    d += ` C${mx},${Y(s[i-1].value)} ${mx},${Y(s[i].value)} ${X(i)},${Y(s[i].value)}`;
+  }
+  const area = d + ` L${X(s.length-1)},${pad.t+ih} L${X(0)},${pad.t+ih} Z`;
+  const dots = s.map((pt,i) => `<circle class="ln-dot" cx="${X(i)}" cy="${Y(pt.value)}" r="3.5" fill="#fff" stroke="${dim.color}" stroke-width="2"/>`).join('');
+  const hots = s.map((pt,i) => `<circle class="hp" data-i="${i}" cx="${X(i)}" cy="${Y(pt.value)}" r="16" fill="transparent"/>`).join('');
+  box.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+    <defs><linearGradient id="lgArea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${dim.color}" stop-opacity=".26"/><stop offset="1" stop-color="${dim.color}" stop-opacity="0"/>
+    </linearGradient></defs>
+    ${grid}${xlab}
+    <path class="ln-area" d="${area}" fill="url(#lgArea)"/>
+    <path class="ln-path" d="${d}" fill="none" stroke="${dim.color}" stroke-width="2.5" stroke-linecap="round"/>
+    ${dots}${hots}</svg>`;
+  const line = box.querySelector('.ln-path');
+  if(animate && !REDUCED.matches){
+    const L = line.getTotalLength();
+    line.style.strokeDasharray = L; line.style.strokeDashoffset = L;
+    line.getBoundingClientRect();
+    line.style.transition = 'stroke-dashoffset .9s cubic-bezier(.22,.61,.36,1)';
+    line.style.strokeDashoffset = 0;
+    setTimeout(() => { line.style.strokeDasharray = ''; line.style.transition = ''; }, 1000);
+    const ar = box.querySelector('.ln-area');
+    ar.style.opacity = 0; ar.getBoundingClientRect();
+    ar.style.transition = 'opacity .6s ease .35s'; ar.style.opacity = 1;
+    box.querySelectorAll('.ln-dot').forEach((c,i) => {
+      c.style.opacity = 0; c.getBoundingClientRect();
+      c.style.transition = `opacity .3s ease ${.15 + i*.09}s`; c.style.opacity = 1;
+    });
+  }
+  box.querySelectorAll('.hp').forEach(h => {
+    const i = +h.dataset.i, pt = s[i];
+    const tip = e => showTip(`<b>${pt.label}</b><br>${dim.tip(pt.value, dashP === 'month' || dashP === 'year')}`, e);
+    h.addEventListener('pointerenter', e => {
+      tip(e);
+      const dot = box.querySelectorAll('.ln-dot')[i];
+      dot.setAttribute('r', 5.5); dot.setAttribute('stroke-width', 3);
+    });
+    h.addEventListener('pointermove', tip);
+    h.addEventListener('pointerleave', () => {
+      hideTip();
+      const dot = box.querySelectorAll('.ln-dot')[i];
+      dot.setAttribute('r', 3.5); dot.setAttribute('stroke-width', 2);
+    });
+  });
+}
+
+function renderDonut(boxId, items, centerTop, centerSub, fmtVal, animate){
+  const box = document.getElementById(boxId);
+  const total = items.reduce((a,b) => a + b.value, 0) || 1;
+  const R = 62, C = 2 * Math.PI * R;
+  let start = 0, segs = '';
+  items.forEach((it, i) => {
+    const len = it.value / total * C;
+    segs += `<circle class="dn-seg" data-i="${i}" cx="75" cy="75" r="${R}" fill="none" stroke="${it.color}" stroke-width="24" pointer-events="stroke" stroke-dashoffset="${-start}"/>`;
+    start += len;
+  });
+  const legend = `<div class="lg">` + items.map((it,i) => `
+    <div class="lg-row" data-i="${i}"><i style="background:${it.color}"></i>
+      <span class="lg-name">${it.name}</span>
+      <span class="lg-val">${fmtVal(it.value)}</span>
+      <span class="lg-pct">${(it.value/total*100).toFixed(1)}%</span></div>`).join('') + `</div>`;
+  box.innerHTML = `<svg width="150" height="150" viewBox="0 0 150 150">
+      <g transform="rotate(-90 75 75)">${segs}</g>
+      <text x="75" y="72" text-anchor="middle" font-size="17" font-weight="700" fill="#1f2d3d">${centerTop}</text>
+      <text x="75" y="90" text-anchor="middle" font-size="10" fill="#909399">${centerSub}</text>
+    </svg>` + legend;
+  const tip = it => e => showTip(`<b>${it.name}</b><br>${fmtVal(it.value)} · ${(it.value/total*100).toFixed(1)}%`, e);
+  box.querySelectorAll('.dn-seg').forEach((seg, i) => {
+    const it = items[i], len = it.value / total * C;
+    seg.style.strokeDasharray = '0 ' + C;
+    if(animate && !REDUCED.matches){
+      seg.style.transition = `stroke-dasharray .8s cubic-bezier(.22,.61,.36,1) ${i*130}ms`;
+      seg.getBoundingClientRect();
+      seg.style.strokeDasharray = `${Math.max(0, len-2)} ${C-len+2}`;
+    } else {
+      seg.style.strokeDasharray = `${len} ${C-len}`;
+    }
+    seg.addEventListener('pointerenter', e => { seg.style.strokeWidth = 28; tip(it)(e); });
+    seg.addEventListener('pointermove', tip(it));
+    seg.addEventListener('pointerleave', () => { seg.style.strokeWidth = 24; hideTip(); });
+  });
+  box.querySelectorAll('.lg-row').forEach((row, i) => {
+    const seg = box.querySelectorAll('.dn-seg')[i];
+    row.addEventListener('pointerenter', () => seg.style.strokeWidth = 28);
+    row.addEventListener('pointerleave', () => seg.style.strokeWidth = 24);
+  });
+}
+
+/* 运输方式构成:按周期键确定性生成,与总单量勾稽 */
+function transMix(){
+  const rows = getViewRows(dashP, dashVal);
+  /* 真实数据优先:库里 ltl/line/charter 三列求和;全为0时退回演示比例 */
+  const sumBy = k => rows.reduce((a,r) => a + (r[k] || 0), 0);
+  const nL = sumBy('ltl'), nX = sumBy('line'), nC = sumBy('charter');
+  if(nL + nX + nC > 0){
+    return [{name:'零担', value:nL, color:'#409eff'},
+            {name:'干线', value:nX, color:'#18b2a3'},
+            {name:'包车', value:nC, color:'#f29b2e'}];
+  }
+  const total = rows.reduce((a,r) => a + r.orders, 0);
+  const h = hashStr('trans|' + dashP + '|' + (dashVal || '') + '|' + (dashProj || ''));
+  const w = [0.40 + (h % 17)/100, 0.30 + ((h >> 3) % 15)/100, 0.16 + ((h >> 6) % 13)/100];
+  const s = w[0] + w[1] + w[2];
+  const c = w.map(x => Math.round(total * x / s));
+  c[0] += total - (c[0] + c[1] + c[2]);
+  return [{name:'零担', value:c[0], color:'#409eff'},
+          {name:'干线', value:c[1], color:'#18b2a3'},
+          {name:'包车', value:c[2], color:'#f29b2e'}];
+}
+
+/* 三种运输方式的利润拆分:总利润(与 KPI/趋势同口径)按确定性比例分到零担/干线/包车 */
+function transProfitMix(){
+  const rows = getViewRows(dashP, dashVal);
+  const isLong = dashP === 'month' || dashP === 'year';
+  const S = k => rows.reduce((a,r) => a + (r[k] || 0), 0);
+  const total = (isLong ? S('invoiced') : S('amt')) / 1.09 - S('cost');
+  if(total <= 0) return [0, 0, 0];
+  const h = hashStr('tprofit|' + dashP + '|' + (dashVal || '') + '|' + (dashProj || ''));
+  const w = [0.42 + (h % 13) / 100, 0.33 + ((h >> 4) % 11) / 100, 0.11 + ((h >> 7) % 9) / 100];
+  const s = w[0] + w[1] + w[2];
+  return w.map(x => total * x / s);
+}
+
+/* 运输方式并排双环:左环=订单数量占比,右环=三种方式利润占比,共用下方横排图例 */
+function renderTransDonut(items, profits, animate){
+  const box = document.getElementById('transBox');
+  const totalO = items.reduce((a,b) => a + b.value, 0) || 1;
+  const totalP = profits.reduce((a,b) => a + b, 0);
+  const pctP = v => totalP > 0 ? (v / totalP * 100).toFixed(1) : '0.0';
+  const SZ = 120, CX = SZ/2, R = 44, SW = 16, C = 2 * Math.PI * R;
+  let oSegs = '', pSegs = '', a1 = 0, a2 = 0;
+  items.forEach((it, i) => {
+    const len = it.value / totalO * C;
+    oSegs += `<circle class="dn-seg t-o" data-i="${i}" cx="${CX}" cy="${CX}" r="${R}" fill="none" stroke="${it.color}" stroke-width="${SW}" pointer-events="stroke" stroke-dashoffset="${-a1}"/>`;
+    a1 += len;
+  });
+  profits.forEach((v, i) => {
+    const len = (totalP > 0 ? v / totalP : 0) * C;
+    pSegs += `<circle class="dn-seg t-p" data-i="${i}" cx="${CX}" cy="${CX}" r="${R}" fill="none" stroke="${items[i].color}" stroke-width="${SW}" pointer-events="stroke" stroke-dashoffset="${-a2}"/>`;
+    a2 += len;
+  });
+  const donut = (segs, top, sub) => `<svg width="${SZ}" height="${SZ}" viewBox="0 0 ${SZ} ${SZ}">
+      <g transform="rotate(-90 ${CX} ${CX})">${segs}</g>
+      <text x="${CX}" y="${CX - 2}" text-anchor="middle" font-size="15" font-weight="700" fill="#1f2d3d">${top}</text>
+      <text x="${CX}" y="${CX + 14}" text-anchor="middle" font-size="9.5" fill="#909399">${sub}</text>
+    </svg>`;
+  const legend = `<div class="lg lg-wide">` + items.map((it, i) => `
+    <div class="lg-row2" data-i="${i}"><i style="background:${it.color}"></i><span>${it.name}</span>
+      <span class="o">订单 <b>${it.value}</b> 单 · ${(it.value/totalO*100).toFixed(1)}%</span>
+      <span class="p">利润 <b>¥${fmtShort(profits[i])}</b> · ${pctP(profits[i])}%</span></div>`).join('') + `</div>`;
+  box.innerHTML = `<div class="donut-pair">` + donut(oSegs, String(totalO), '订单总量') +
+                  donut(pSegs, '¥' + fmtShort(totalP), '利润总额') + `</div>` + legend;
+  const setSeg = (seg, len, delay) => {
+    seg.style.strokeDasharray = '0 ' + C;
+    if(animate && !REDUCED.matches){
+      seg.style.transition = `stroke-dasharray .8s cubic-bezier(.22,.61,.36,1) ${delay}ms`;
+      seg.getBoundingClientRect();
+      seg.style.strokeDasharray = `${Math.max(0, len-2)} ${C-len+2}`;
+    } else {
+      seg.style.strokeDasharray = `${len} ${C-len}`;
+    }
+  };
+  const oEls = box.querySelectorAll('.t-o'), pEls = box.querySelectorAll('.t-p');
+  oEls.forEach((seg, i) => {
+    const it = items[i], len = it.value / totalO * C;
+    setSeg(seg, len, i * 130);
+    const tip = e => showTip(`<b>${it.name}</b><br>订单量 <b>${it.value}</b> 单 · ${(it.value/totalO*100).toFixed(1)}%`, e);
+    seg.addEventListener('pointerenter', e => { seg.style.strokeWidth = SW + 3; tip(e); });
+    seg.addEventListener('pointermove', tip);
+    seg.addEventListener('pointerleave', () => { seg.style.strokeWidth = SW; hideTip(); });
+  });
+  pEls.forEach((seg, i) => {
+    const it = items[i], v = profits[i], len = (totalP > 0 ? v / totalP : 0) * C;
+    setSeg(seg, len, 300 + i * 130);
+    const tip = e => showTip(`<b>${it.name}利润</b><br>¥${fmtMoney(v)} · ${pctP(v)}%`, e);
+    seg.addEventListener('pointerenter', e => { seg.style.strokeWidth = SW + 3; tip(e); });
+    seg.addEventListener('pointermove', tip);
+    seg.addEventListener('pointerleave', () => { seg.style.strokeWidth = SW; hideTip(); });
+  });
+  box.querySelectorAll('.lg-row2').forEach((row, i) => {
+    row.addEventListener('pointerenter', () => { oEls[i].style.strokeWidth = SW + 3; pEls[i].style.strokeWidth = SW + 3; });
+    row.addEventListener('pointerleave', () => { oEls[i].style.strokeWidth = SW; pEls[i].style.strokeWidth = SW; });
+  });
+}
+
+function renderBars(rows, animate){
+  const box = document.getElementById('profitBox');
+  const W = Math.max(300, box.clientWidth), H = Math.max(200, box.clientHeight || 232);
+  const pad = {l:12, r:12, t:30, b:28};
+  const isLong = dashP === 'month' || dashP === 'year';
+  const data = rows.map((rw, i) => {
+    const dim = !!dashProj && rw.proj !== dashProj;   /* 未选中的厂置灰 */
+    return { name: rw.proj.replace('公司',''), full: rw.proj,
+      value: (isLong ? rw.invoiced/1.09 : rw.amt/1.09) - rw.cost,
+      color: dim ? '#d8dfe9' : (P_COLOR[rw.proj] || PAL[i % PAL.length]) };
+  });
+  const vmax = niceMax(Math.max(...data.map(d => d.value)));
+  const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
+  const slot = iw / data.length, bw = Math.min(52, slot * 0.44);
+  let grid = '';
+  for(let k = 1; k <= 4; k++){
+    const gy = pad.t + ih - ih * k / 4;
+    grid += `<line x1="${pad.l}" y1="${gy}" x2="${W-pad.r}" y2="${gy}" stroke="#eef1f6"/>`;
+  }
+  grid += `<line x1="${pad.l}" y1="${pad.t+ih}" x2="${W-pad.r}" y2="${pad.t+ih}" stroke="#dfe5ee"/>`;
+  let defs = '', bars = '', labs = '';
+  data.forEach((d, i) => {
+    const x = pad.l + slot*i + (slot - bw)/2;
+    const y = pad.t + ih - d.value/vmax*ih, h = d.value/vmax*ih;
+    defs += `<linearGradient id="bg${i}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${d.color}" stop-opacity=".72"/><stop offset="1" stop-color="${d.color}"/></linearGradient>`;
+    bars += `<rect class="bar-rect" data-i="${i}" x="${x}" y="${y}" width="${bw}" height="${Math.max(2,h)}" rx="5" fill="url(#bg${i})"/>`;
+    labs += `<text class="bar-val" x="${x+bw/2}" y="${y-7}" text-anchor="middle" font-size="11" font-weight="600" fill="#303133">${fmtShort(d.value)}</text>` +
+            `<text x="${x+bw/2}" y="${H-8}" text-anchor="middle" font-size="11" fill="#606266">${d.name}</text>`;
+  });
+  box.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs>${defs}</defs>${grid}${bars}${labs}</svg>`;
+  if(animate && !REDUCED.matches){
+    box.querySelectorAll('.bar-rect').forEach((rc, i) => {
+      rc.style.transformBox = 'fill-box'; rc.style.transformOrigin = '50% 100%';
+      rc.style.transform = 'scaleY(0)'; rc.getBoundingClientRect();
+      rc.style.transition = `transform .6s cubic-bezier(.22,.61,.36,1) ${i*90}ms`;
+      rc.style.transform = 'scaleY(1)';
+    });
+    box.querySelectorAll('.bar-val').forEach((t, i) => {
+      t.style.opacity = 0; t.getBoundingClientRect();
+      t.style.transition = `opacity .3s ease ${.35 + i*.09}s`; t.style.opacity = 1;
+    });
+  }
+  box.querySelectorAll('.bar-rect').forEach(rc => {
+    const d = data[+rc.dataset.i];
+    const tip = e => showTip(`<b>${d.full}</b><br>利润 <b>${fmtMoney(d.value)}</b> 元`, e);
+    rc.addEventListener('pointerenter', tip);
+    rc.addEventListener('pointermove', tip);
+    rc.addEventListener('pointerleave', hideTip);
+  });
+}
+
+function renderCharts(animate){
+  const allRows = getRows(dashP, dashVal);   /* 占比/柱状始终展示全部四厂,未选中置灰 */
+  const isLong = dashP === 'month' || dashP === 'year';
+  renderTrend(animate);
+  const bizItems = allRows.map((r,i) => {
+    const dim = !!dashProj && r.proj !== dashProj;
+    return { name:r.proj, value: isLong ? r.sales : r.amt,
+             color: dim ? '#d8dfe9' : (P_COLOR[r.proj] || PAL[i % PAL.length]) };
+  });
+  renderDonut('bizBox', bizItems,
+    '¥' + fmtShort(allRows.reduce((a,r) => a + (isLong ? r.sales : r.amt), 0)),
+    '含税金额', v => '¥' + fmtShort(v), animate);
+  const tm = transMix();
+  renderTransDonut(tm, transProfitMix(), animate);
+  renderBars(allRows, animate);
+  /* 下钻:点扇区/柱子切换项目视角(再点已选中的退回全部) */
+  document.querySelectorAll('#bizBox .dn-seg').forEach((seg,i) =>
+    seg.addEventListener('click', () => setDashProj(dashProj === bizItems[i].name ? '' : bizItems[i].name)));
+  document.querySelectorAll('#profitBox .bar-rect').forEach(rc =>
+    rc.addEventListener('click', () => {
+      const d = allRows[+rc.dataset.i];
+      setDashProj(dashProj === d.proj ? '' : d.proj);
+    }));
+}
+
+/* 表格 ⇄ 图表 切换 */
+const btnChartToggle = document.getElementById('btnChartToggle');
+function setDashMode(m){
+  dashMode = m;
+  const chart = m === 'chart';
+  document.getElementById('tableWrap').style.display = chart ? 'none' : '';
+  document.getElementById('chartView').style.display = chart ? '' : 'none';
+  btnChartToggle.classList.toggle('is-on', chart);
+  btnChartToggle.innerHTML = chart
+    ? '<svg class="ic"><use href="#i-grid"/></svg><span>表格视图</span>'
+    : '<svg class="ic"><use href="#i-chart"/></svg><span>图表视图</span>';
+  btnFullscreen.style.display = chart ? '' : 'none';
+  if(!chart && fsActive()) exitFs();   /* 回到表格时自动退出全屏 */
+  if(chart) renderCharts(true); else hideTip();
+}
+btnChartToggle.addEventListener('click', () => setDashMode(dashMode === 'chart' ? 'table' : 'chart'));
+
+/* 全屏展示:优先原生 Fullscreen API,被环境禁用时降级为固定定位铺满 */
+const btnFullscreen = document.getElementById('btnFullscreen');
+const dashCard = document.getElementById('dashCard');
+function fsActive(){ return !!document.fullscreenElement || dashCard.classList.contains('faux-fs'); }
+function setFsUI(on){
+  btnFullscreen.classList.toggle('is-on', on);
+  btnFullscreen.innerHTML = on
+    ? '<svg class="ic"><use href="#i-collapse"/></svg><span>退出全屏</span>'
+    : '<svg class="ic"><use href="#i-expand"/></svg><span>全屏展示</span>';
+}
+function fsRedraw(){ if(dashMode === 'chart') renderCharts(false); }
+function exitFs(){
+  if(document.fullscreenElement) document.exitFullscreen();
+  dashCard.classList.remove('faux-fs');
+  setFsUI(false);
+  fsRedraw();
+}
+btnFullscreen.addEventListener('click', () => {
+  if(document.fullscreenElement){ document.exitFullscreen(); return; }
+  if(dashCard.classList.contains('faux-fs')){ exitFs(); return; }
+  const p = dashCard.requestFullscreen ? dashCard.requestFullscreen() : null;
+  if(p && p.catch) p.catch(() => { dashCard.classList.add('faux-fs'); setFsUI(true); fsRedraw(); });
+  else if(!p){ dashCard.classList.add('faux-fs'); setFsUI(true); fsRedraw(); }
+});
+document.addEventListener('fullscreenchange', () => { setFsUI(fsActive()); fsRedraw(); });
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && dashCard.classList.contains('faux-fs')) exitFs();
+});
+
+let rsT;
+window.addEventListener('resize', () => {
+  clearTimeout(rsT);
+  rsT = setTimeout(() => { if(dashMode === 'chart') renderCharts(false); }, 160);
+});
+
+document.querySelectorAll('.pbtn').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.pbtn').forEach(x => x.classList.remove('is-active'));
+  b.classList.add('is-active');
+  dashP = b.dataset.p;
+  buildQueryInput(dashP);
+  loadLive(dashP);
+  renderReport(dashP);
+}));
+
+buildDimChips();
+buildQueryInput('day');
+renderReport('day');
+loadLive('day');
+</script>
+</body>
+</html>
